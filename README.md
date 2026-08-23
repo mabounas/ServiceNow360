@@ -124,6 +124,17 @@ Tickets par type, par statut, par sévérité et par module ; délai moyen de tr
 pipeline des évolutions et nouvelles demandes façon backlog ; avancement global et par phase ; tâches en retard ;
 satisfaction moyenne ; exports CSV et impression PDF.
 
+### Formulaire de contact public
+
+Section « Contact » sur la page d'accueil (FR/EN) : prénom, nom, e-mail, société, téléphone, objet et message.
+Les envois sont **stockés en base** (`ContactMessage`) avec l'IP et le user-agent, protégés par un champ leurre
+anti-robot et un garde-fou de 5 messages par heure et par adresse. Chaque message notifie les administrateurs.
+
+L'écran `/app/admin/contacts` (réservé à l'administrateur) liste les messages, les filtre par statut
+(nouveau, lu, traité, archivé), permet d'ouvrir un message — ce qui le marque lu —, d'y ajouter une note
+interne, de répondre par e-mail, de le marquer traité ou archivé, de le supprimer et d'exporter le tout en CSV.
+Le nombre de nouveaux messages apparaît dans la navigation.
+
 ### Module 5 — Notifications
 
 Notification à chaque changement de statut significatif, à chaque nouveau commentaire (hors note interne),
