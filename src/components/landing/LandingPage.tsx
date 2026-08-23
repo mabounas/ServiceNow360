@@ -408,19 +408,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* — bandeau références — */}
-      <section style={{ borderTop: '2px solid var(--color-divider)', borderBottom: '2px solid var(--color-divider)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 32px', display: 'flex', alignItems: 'center', gap: 40, flexWrap: 'wrap' }}>
-          <div className="text-muted" style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t.logos.label}</div>
-          <div style={{ display: 'flex', gap: 44, flexWrap: 'wrap', alignItems: 'center', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.01em', opacity: 0.55 }}>
-            <span>NORDLINE</span>
-            <span>CAP&amp;CO</span>
-            <span>ATELIER 9</span>
-            <span>VELUM</span>
-            <span>GRANDET</span>
-          </div>
-        </div>
-      </section>
+      {/* Le hero reste refermé par un filet 2 px (la bande de références a été retirée). */}
+      <div style={{ borderTop: '2px solid var(--color-divider)' }} />
 
       {/* — bénéfices — */}
       <section id="benefices" style={{ maxWidth: 1280, margin: '0 auto', padding: '72px 32px 0' }}>

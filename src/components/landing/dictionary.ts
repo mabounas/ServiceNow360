@@ -49,7 +49,6 @@ export const DICT = {
     },
     roleOpts: { o1: 'Direction', o2: 'IT et support', o3: 'Chef de projet', o4: 'Autre' },
     countryOpts: { o1: 'France', o2: 'Belgique', o3: 'Suisse', o4: 'Maroc', o5: 'Autre' },
-    logos: { label: 'Ils travaillent avec nous' },
     benefits: {
       title: 'Un seul outil pour les demandes, les incidents et les livrables',
       b1t: 'Projets structurés',
@@ -176,7 +175,6 @@ export const DICT = {
     },
     roleOpts: { o1: 'Executive', o2: 'IT and support', o3: 'Project manager', o4: 'Other' },
     countryOpts: { o1: 'France', o2: 'Belgium', o3: 'Switzerland', o4: 'Morocco', o5: 'Other' },
-    logos: { label: 'Teams working with us' },
     benefits: {
       title: 'One tool for requests, incidents and deliverables',
       b1t: 'Structured projects',
