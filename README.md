@@ -1,5 +1,7 @@
 # ServiceNow360
 
+**En ligne : https://servicedesk360-rosy.vercel.app** — dépôt : https://github.com/mabounas/ServiceNow360
+
 Portail client de **gestion des anomalies (tickets)** et de **suivi de projet (planning / diagramme de Gantt)**,
 réalisé d'après le cahier des charges *Portail Client de Gestion des Anomalies et Module de Suivi de Projet* (v0.1).
 
@@ -14,12 +16,12 @@ toute l'application consomme ses tokens.
 
 | Composant | Choix |
 | --- | --- |
-| Front-end | Next.js 15 (App Router), React 19, TypeScript — web responsive |
+| Front-end | Next.js 16 (App Router), React 19, TypeScript — web responsive |
 | Back-end | Routes API Next.js (REST), architecture modulaire |
 | Base de données | PostgreSQL via Prisma |
 | Authentification | Session JWT signée (`jose`) en cookie httpOnly, mots de passe `bcrypt` |
 | Notifications | In-app (systématique) + e-mail SMTP via `nodemailer` (optionnel) |
-| Hébergement visé | Vercel (serverless) + PostgreSQL managé |
+| Hébergement | Vercel (serverless, région `cdg1`) + PostgreSQL Neon |
 
 ## Démarrage
 
@@ -160,7 +162,6 @@ Le cahier des charges laisse plusieurs points ouverts ; voici les choix retenus,
 
 ## Reste à faire pour une mise en production
 
-- Provisionner une base PostgreSQL managée et renseigner `DATABASE_URL` / `AUTH_SECRET` sur l'hébergeur.
 - Configurer le SMTP pour activer le canal e-mail des notifications.
 - Réinitialisation de mot de passe en libre-service (aujourd'hui à la main par l'administrateur).
 - Rappels automatiques d'inactivité et d'approche d'échéance SLA (tâche planifiée / cron).
