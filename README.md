@@ -44,17 +44,20 @@ npm run dev
 
 ### Comptes de démonstration
 
-Après `npm run db:seed` — mot de passe commun **`Demo1234`** :
+Après `npm run db:seed` — mot de passe commun **`Demo1234`**, sauf l'administrateur :
 
 | Compte | Rôle |
 | --- | --- |
-| `admin@servicenow360.dev` | Administrateur (tous projets) |
+| `admin_servicedesk@servicenow360.com` | Administrateur (tous projets) |
 | `chef.projet@servicenow360.dev` | Chef de projet |
 | `technicien@servicenow360.dev` | Technicien IT |
 | `superviseur@nordline.dev` | Superviseur (client) |
 | `client@nordline.dev` | Utilisateur standard (client) |
 | `nouveau@velum.dev` | Compte **en attente** de validation |
 
+> L'adresse et le mot de passe de l'administrateur se définissent par `SEED_ADMIN_EMAIL` et
+> `SEED_ADMIN_PASSWORD` au moment du seed : aucun mot de passe réel n'est stocké dans le dépôt.
+>
 > Sans jeu de démonstration, le **tout premier compte créé** via le formulaire d'inscription devient
 > automatiquement administrateur : sans lui, aucune inscription ne pourrait être validée.
 

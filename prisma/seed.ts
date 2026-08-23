@@ -13,6 +13,11 @@ const prisma = new PrismaClient();
 const PASSWORD = 'Demo1234';
 const DAY = 86_400_000;
 
+// Le compte administrateur ne doit pas porter un mot de passe reel dans le depot :
+// il se surcharge par variables d'environnement au moment du seed.
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin_servicedesk@servicenow360.com';
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? PASSWORD;
+
 function day(offset: number) {
   const date = new Date();
   date.setHours(9, 0, 0, 0);
@@ -30,7 +35,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   const people = [
-    { key: 'admin', firstName: 'Sophie', lastName: 'Marchand', email: 'admin@servicenow360.dev', company: 'ITLS', jobRole: 'Direction', isAdmin: true },
+    { key: 'admin', firstName: 'Sophie', lastName: 'Marchand', email: ADMIN_EMAIL, company: 'ITLS', jobRole: 'Direction', isAdmin: true },
     { key: 'pm', firstName: 'Karim', lastName: 'Benali', email: 'chef.projet@servicenow360.dev', company: 'ITLS', jobRole: 'Chef de projet' },
     { key: 'tech', firstName: 'Léa', lastName: 'Fontaine', email: 'technicien@servicenow360.dev', company: 'ITLS', jobRole: 'IT et support' },
     { key: 'tech2', firstName: 'Marc', lastName: 'Dubois', email: 'technicien2@servicenow360.dev', company: 'ITLS', jobRole: 'IT et support' },
@@ -40,13 +45,20 @@ async function main() {
     { key: 'velum', firstName: 'Paul', lastName: 'Grandet', email: 'client@velum.dev', company: 'Velum', jobRole: 'Direction' },
   ];
 
+  const adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+
   const users: Record<string, { id: string }> = {};
   for (const person of people) {
     const { key, isAdmin, ...rest } = person;
     users[key] = await prisma.user.upsert({
       where: { email: rest.email },
       update: {},
-      create: { ...rest, passwordHash, isAdmin: Boolean(isAdmin), status: 'ACTIVE' },
+      create: {
+        ...rest,
+        passwordHash: isAdmin ? adminPasswordHash : passwordHash,
+        isAdmin: Boolean(isAdmin),
+        status: 'ACTIVE',
+      },
       select: { id: true },
     });
   }
@@ -444,7 +456,7 @@ async function main() {
   await prisma.counter.upsert({ where: { id: 'DEM' }, update: { value: counters.DEM }, create: { id: 'DEM', value: counters.DEM } });
 
   console.log('Jeu de démonstration créé.');
-  console.log(`Mot de passe commun : ${PASSWORD}`);
+  console.log(`Mot de passe commun : ${PASSWORD} (administrateur : SEED_ADMIN_PASSWORD)`);
   for (const person of people) console.log(` - ${person.email} (${person.jobRole})`);
 }
 
