@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 type Props = {
   user: { firstName: string; lastName: string; isAdmin: boolean };
   unread: number;
+  newContacts: number;
 };
 
-export default function AppHeader({ user, unread }: Props) {
+export default function AppHeader({ user, unread, newContacts }: Props) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -42,6 +43,9 @@ export default function AppHeader({ user, unread }: Props) {
               </Link>
               <Link href="/app/admin/utilisateurs" className={isActive('/app/admin/utilisateurs') ? 'is-active' : ''}>
                 Utilisateurs
+              </Link>
+              <Link href="/app/admin/contacts" className={isActive('/app/admin/contacts') ? 'is-active' : ''}>
+                Contacts{newContacts > 0 ? ` (${newContacts})` : ''}
               </Link>
             </>
           ) : null}

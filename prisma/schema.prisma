@@ -21,9 +21,9 @@ enum AccountStatus {
 }
 
 enum ProjectRole {
-  USER            // utilisateur standard (client) — voit ses propres tickets
-  SUPERVISOR      // superviseur — voit tous les tickets du projet
-  TECHNICIAN      // technicien IT — traite les tickets assignés
+  USER // utilisateur standard (client) — voit ses propres tickets
+  SUPERVISOR // superviseur — voit tous les tickets du projet
+  TECHNICIAN // technicien IT — traite les tickets assignés
   PROJECT_MANAGER // chef de projet — pilote le planning et arbitre
 }
 
@@ -43,16 +43,17 @@ model User {
   updatedAt    DateTime      @updatedAt
 
   memberships     ProjectMember[]
-  createdTickets  Ticket[]        @relation("TicketCreator")
-  assignedTickets Ticket[]        @relation("TicketAssignee")
+  createdTickets  Ticket[]         @relation("TicketCreator")
+  assignedTickets Ticket[]         @relation("TicketAssignee")
   comments        TicketComment[]
   ticketEvents    TicketEvent[]
-  ownedTasks      Task[]          @relation("TaskOwner")
+  ownedTasks      Task[]           @relation("TaskOwner")
   taskComments    TaskComment[]
   notifications   Notification[]
   auditLogs       AuditLog[]
-  risks           Risk[]          @relation("RiskOwner")
+  risks           Risk[]           @relation("RiskOwner")
   attachments     Attachment[]
+  handledContacts ContactMessage[] @relation("ContactHandler")
 
   @@index([status])
 }
@@ -95,9 +96,9 @@ model ProjectMember {
 // ─────────────────────────────────────────────────────────────
 
 enum TicketType {
-  INCIDENT  // INC- : dysfonctionnement, piloté par SLA
+  INCIDENT // INC- : dysfonctionnement, piloté par SLA
   EVOLUTION // EVO- : amélioration d'une fonctionnalité existante
-  DEMANDE   // DEM- : nouvelle fonctionnalité / nouveau module
+  DEMANDE // DEM- : nouvelle fonctionnalité / nouveau module
 }
 
 enum TicketStatus {
@@ -394,4 +395,41 @@ model AuditLog {
 model Counter {
   id    String @id // "INC" | "EVO" | "DEM"
   value Int    @default(0)
+}
+
+// ─────────────────────────────────────────────────────────────
+// Formulaire de contact public
+// ─────────────────────────────────────────────────────────────
+
+enum ContactStatus {
+  NEW
+  READ
+  HANDLED
+  ARCHIVED
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  company   String?
+  phone     String?
+  subject   String
+  message   String        @db.Text
+  status    ContactStatus @default(NEW)
+
+  // Traitement cote administration
+  handledById  String?
+  handledAt    DateTime?
+  internalNote String?   @db.Text
+
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  handledBy User? @relation("ContactHandler", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
 }

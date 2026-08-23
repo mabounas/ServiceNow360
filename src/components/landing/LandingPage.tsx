@@ -38,6 +38,20 @@ export default function LandingPage() {
   const [err, setErr] = useState<Errors>({});
   const [signupDone, setSignupDone] = useState('');
 
+  const [contact, setContact] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    company: '',
+    phone: '',
+    subject: '',
+    message: '',
+    website: '', // piège à robots, laissé vide par un humain
+  });
+  const [contactErr, setContactErr] = useState<Errors>({});
+  const [contactDone, setContactDone] = useState('');
+  const [contactBusy, setContactBusy] = useState(false);
+
   const t = DICT[lang];
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -141,6 +155,38 @@ export default function LandingPage() {
     }
   }
 
+  async function submitContact() {
+    const d = t.errs;
+    const errs: Errors = {};
+    if (!contact.firstName.trim()) errs.firstName = d.required;
+    if (!contact.lastName.trim()) errs.lastName = d.required;
+    if (!contact.email.trim()) errs.email = d.required;
+    else if (!EMAIL_RE.test(contact.email.trim())) errs.email = d.email;
+    if (!contact.subject.trim()) errs.subject = d.required;
+    if (contact.message.trim().length < 10) errs.message = d.required;
+    setContactErr(errs);
+    setContactDone('');
+    if (Object.keys(errs).length) return;
+
+    setContactBusy(true);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setContactErr({ message: data.error ?? 'Envoi impossible.' });
+        return;
+      }
+      setContactDone(t.contact.done);
+      setContact({ firstName: '', lastName: '', email: '', company: '', phone: '', subject: '', message: '', website: '' });
+    } finally {
+      setContactBusy(false);
+    }
+  }
+
   const errorLine = (message?: string) =>
     message ? <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 5 }}>{message}</div> : null;
 
@@ -183,6 +229,7 @@ export default function LandingPage() {
             <a href="#benefices" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.produit}</a>
             <a href="#apercu" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.solutions}</a>
             <a href="#chiffres" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.clients}</a>
+            <a href="#contact" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.ressources}</a>
           </nav>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ display: 'flex', border: '1px solid var(--color-divider)' }}>
@@ -529,6 +576,91 @@ export default function LandingPage() {
         </blockquote>
       </section>
 
+      {/* — formulaire de contact — */}
+      <section id="contact" style={{ maxWidth: 1280, margin: '0 auto', padding: '72px 32px 0' }}>
+        <div className="landing-preview" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 48, alignItems: 'start' }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-accent-700)', marginBottom: 14 }}>
+              {t.contact.kicker}
+            </div>
+            <h2 style={{ fontSize: 30, margin: '0 0 14px' }}>{t.contact.title}</h2>
+            <p className="text-muted" style={{ fontSize: 14, margin: 0 }}>{t.contact.sub}</p>
+            <p className="text-muted" style={{ fontSize: 12, marginTop: 18 }}>{t.contact.note}</p>
+          </div>
+
+          <div style={{ border: '2px solid var(--color-divider)', background: 'var(--color-surface)', padding: 28 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="field">
+                <label htmlFor="ct-first">{t.contact.firstName}</label>
+                <input className="input" id="ct-first" autoComplete="given-name" value={contact.firstName} onChange={(e) => setContact({ ...contact, firstName: e.target.value })} />
+                {errorLine(contactErr.firstName)}
+              </div>
+              <div className="field">
+                <label htmlFor="ct-last">{t.contact.lastName}</label>
+                <input className="input" id="ct-last" autoComplete="family-name" value={contact.lastName} onChange={(e) => setContact({ ...contact, lastName: e.target.value })} />
+                {errorLine(contactErr.lastName)}
+              </div>
+              <div className="field">
+                <label htmlFor="ct-email">{t.contact.email}</label>
+                <input className="input" id="ct-email" type="email" autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                {errorLine(contactErr.email)}
+              </div>
+              <div className="field">
+                <label htmlFor="ct-phone">{t.contact.phone}</label>
+                <input className="input" id="ct-phone" type="tel" autoComplete="tel" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+              </div>
+              <div className="field">
+                <label htmlFor="ct-company">{t.contact.company}</label>
+                <input className="input" id="ct-company" autoComplete="organization" value={contact.company} onChange={(e) => setContact({ ...contact, company: e.target.value })} />
+              </div>
+              <div className="field">
+                <label htmlFor="ct-subject">{t.contact.subject}</label>
+                <select className="input" id="ct-subject" value={contact.subject} onChange={(e) => setContact({ ...contact, subject: e.target.value })} style={{ appearance: 'none' }}>
+                  <option value="">{t.contact.choose}</option>
+                  {t.contact.subjects.map((label) => (
+                    <option key={label} value={label}>{label}</option>
+                  ))}
+                </select>
+                {errorLine(contactErr.subject)}
+              </div>
+              <div className="field" style={{ gridColumn: 'span 2' }}>
+                <label htmlFor="ct-message">{t.contact.message}</label>
+                <textarea className="input" id="ct-message" rows={5} value={contact.message} onChange={(e) => setContact({ ...contact, message: e.target.value })} />
+                {errorLine(contactErr.message)}
+              </div>
+            </div>
+
+            {/* Champ leurre : invisible et hors du parcours clavier, seul un robot le remplit. */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={contact.website}
+              onChange={(e) => setContact({ ...contact, website: e.target.value })}
+              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+            />
+
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              onClick={submitContact}
+              disabled={contactBusy}
+              style={{ minHeight: 44, paddingInline: 16, marginTop: 18 }}
+            >
+              {contactBusy ? t.contact.sending : t.contact.cta}
+            </button>
+
+            {contactDone ? (
+              <div style={{ marginTop: 16, border: '1px solid var(--color-accent)', background: 'var(--color-accent-100)', padding: '12px 14px', fontSize: 13, color: 'var(--color-accent-900)' }}>
+                {contactDone}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
       {/* — bannière d'appel à l'action — */}
       <section style={{ marginTop: 88, background: 'var(--color-accent)', color: 'var(--color-bg)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '72px 32px' }}>
@@ -568,14 +700,14 @@ export default function LandingPage() {
             <h6 style={{ marginBottom: 14 }}>{t.footer.c2}</h6>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
               <li><a href="#acces" className="link-plain">{t.footer.c2b}</a></li>
-              <li><a href="#acces" className="link-plain">{t.footer.c2c}</a></li>
+              <li><a href="#contact" className="link-plain">{t.footer.c2c}</a></li>
             </ul>
           </div>
           <div>
             <h6 style={{ marginBottom: 14 }}>{t.footer.c3}</h6>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
               <li><a href="#acces" className="link-plain">{t.footer.c3a}</a></li>
-              <li><a href="#acces" className="link-plain">{t.footer.c3b}</a></li>
+              <li><a href="#contact" className="link-plain">{t.footer.c3b}</a></li>
               <li><a href="#acces" className="link-plain">{t.footer.c3c}</a></li>
             </ul>
           </div>

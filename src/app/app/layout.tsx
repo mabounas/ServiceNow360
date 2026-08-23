@@ -9,11 +9,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser();
   if (!user) redirect('/');
 
-  const unread = await prisma.notification.count({ where: { userId: user.id, readAt: null } });
+  const [unread, newContacts] = await Promise.all([
+    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+    user.isAdmin ? prisma.contactMessage.count({ where: { status: 'NEW' } }) : Promise.resolve(0),
+  ]);
 
   return (
     <div className="app-shell">
-      <AppHeader user={user} unread={unread} />
+      <AppHeader user={user} unread={unread} newContacts={newContacts} />
       <main className="app-main">
         <div className="container-wide">{children}</div>
       </main>
