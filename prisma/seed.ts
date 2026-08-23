@@ -340,7 +340,7 @@ async function main() {
     createdBy: 'user',
     assignee: 'tech',
     createdOffset: -12,
-    resolvedOffset: -12,
+    resolvedOffset: -11.85,
     closedOffset: -11,
     satisfaction: 5,
     comments: [
