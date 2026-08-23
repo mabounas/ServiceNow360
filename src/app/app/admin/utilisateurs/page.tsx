@@ -10,10 +10,17 @@ export default async function AdminUsersPage() {
   const user = await requireUser();
   if (!user.isAdmin) notFound();
 
-  const users = await prisma.user.findMany({
-    include: { memberships: { include: { project: { select: { id: true, name: true } } } } },
-    orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-  });
+  const [users, projects] = await Promise.all([
+    prisma.user.findMany({
+      include: { memberships: { include: { project: { select: { id: true, name: true } } } } },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+    }),
+    prisma.project.findMany({
+      where: { archived: false },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
 
   return (
     <>
@@ -25,6 +32,7 @@ export default async function AdminUsersPage() {
       </div>
 
       <AdminUsers
+        projects={projects}
         users={users.map((u) => ({
           id: u.id,
           name: fullName(u),
