@@ -74,27 +74,6 @@ export const DICT = {
       name: 'Camille Roussel',
       role: 'Responsable des opérations, Nordline',
     },
-    faqTitle: 'Questions fréquentes',
-    faqItems: [
-      {
-        q: 'Comment mon compte est-il activé ?',
-        a: "Vous créez votre compte vous-même. Il reste en attente jusqu'à ce que l'administrateur vous affecte à un ou plusieurs projets, avec un rôle par projet.",
-      },
-      {
-        q: 'Quels types de tickets puis-je déclarer ?',
-        a: 'Trois : incident/anomalie (INC), évolution/amélioration (EVO) et nouvelle demande ou nouveau module (DEM). Chaque type a son formulaire, son circuit de traitement et son suivi.',
-      },
-      {
-        q: 'Que voit exactement chaque utilisateur ?',
-        a: "Un utilisateur standard voit uniquement les tickets qu'il a créés. Le superviseur voit tous les tickets de ses projets, le technicien ceux qui lui sont assignés, le chef de projet pilote le planning.",
-      },
-      { q: 'Comment sont gérés les SLA ?', a: 'Les SLA sont définis par sévérité pour les incidents. Les dépassements et les échéances proches déclenchent une alerte et remontent au tableau de bord.' },
-      {
-        q: 'Une évolution acceptée arrive-t-elle dans le planning ?',
-        a: "Oui. Au passage au statut « Acceptée / Planifiée », une tâche est créée dans le Gantt du projet et reste liée au ticket d'origine.",
-      },
-      { q: 'Peut-on exporter les données ?', a: 'Les tickets, le planning et les indicateurs s’exportent en CSV, et les vues sont imprimables en PDF depuis le navigateur.' },
-    ],
     banner: {
       title: 'Ouvrez votre espace en quelques minutes',
       sub: 'Créez un compte pour suivre vos anomalies et l’avancement de votre projet de déploiement.',
@@ -107,7 +86,6 @@ export const DICT = {
       c1b: 'Aperçu',
       c1c: 'Chiffres clés',
       c2: 'Ressources',
-      c2a: 'Questions fréquentes',
       c2b: 'Créer un compte',
       c2c: 'Documentation',
       c3: 'Société',
@@ -200,15 +178,6 @@ export const DICT = {
       name: 'Camille Roussel',
       role: 'Head of operations, Nordline',
     },
-    faqTitle: 'Frequently asked questions',
-    faqItems: [
-      { q: 'How is my account activated?', a: 'You create the account yourself. It stays pending until an administrator assigns you to one or more projects, with a role on each.' },
-      { q: 'Which ticket types can I raise?', a: 'Three: incident (INC), change request (EVO) and new demand or module (DEM). Each type has its own form, workflow and reporting.' },
-      { q: 'What does each user see?', a: 'A standard user only sees the tickets they raised. A supervisor sees every ticket on their projects, a technician sees what is assigned to them, and the project manager drives the plan.' },
-      { q: 'How are SLAs handled?', a: 'SLAs are defined per incident severity. Breaches and approaching deadlines raise an alert and surface on the dashboard.' },
-      { q: 'Does an accepted change request reach the plan?', a: 'Yes. Moving to “Accepted / Planned” creates a task in the project Gantt, linked back to the originating ticket.' },
-      { q: 'Can data be exported?', a: 'Tickets, plan and indicators export to CSV, and every view prints to PDF from the browser.' },
-    ],
     banner: {
       title: 'Open your workspace in minutes',
       sub: 'Create an account to track your anomalies and the progress of your deployment project.',
@@ -221,7 +190,6 @@ export const DICT = {
       c1b: 'Preview',
       c1c: 'Key figures',
       c2: 'Resources',
-      c2a: 'FAQ',
       c2b: 'Create an account',
       c2c: 'Documentation',
       c3: 'Company',

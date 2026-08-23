@@ -17,7 +17,6 @@ export default function LandingPage() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>('fr');
   const [tab, setTab] = useState<'login' | 'signup'>('login');
-  const [faqOpen, setFaqOpen] = useState(0);
   const [busy, setBusy] = useState(false);
 
   const [login, setLogin] = useState({ email: '', password: '', remember: false });
@@ -184,7 +183,6 @@ export default function LandingPage() {
             <a href="#benefices" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.produit}</a>
             <a href="#apercu" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.solutions}</a>
             <a href="#chiffres" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.clients}</a>
-            <a href="#faq" style={{ fontSize: 13, textDecoration: 'none', color: 'var(--color-text)' }}>{t.nav.ressources}</a>
           </nav>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ display: 'flex', border: '1px solid var(--color-divider)' }}>
@@ -270,7 +268,7 @@ export default function LandingPage() {
                       />
                       <span>{t.login.remember}</span>
                     </label>
-                    <a href="#faq" style={{ fontSize: 13 }}>{t.login.forgot}</a>
+                    <a href="#acces" style={{ fontSize: 13 }}>{t.login.forgot}</a>
                   </div>
 
                   <button
@@ -531,43 +529,6 @@ export default function LandingPage() {
         </blockquote>
       </section>
 
-      {/* — FAQ — */}
-      <section id="faq" style={{ maxWidth: 1280, margin: '0 auto', padding: '72px 32px 0' }}>
-        <h2 style={{ fontSize: 30, margin: '0 0 28px' }}>{t.faqTitle}</h2>
-        <div style={{ borderTop: '2px solid var(--color-divider)' }}>
-          {t.faqItems.map((item, index) => (
-            <div key={item.q} style={{ borderBottom: '1px solid var(--color-divider)' }}>
-              <button
-                type="button"
-                onClick={() => setFaqOpen(faqOpen === index ? -1 : index)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 24,
-                  background: 'transparent',
-                  border: 0,
-                  padding: '20px 0',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontFamily: 'var(--font-heading)',
-                  fontWeight: 800,
-                  fontSize: 17,
-                  color: 'var(--color-text)',
-                }}
-              >
-                <span>{item.q}</span>
-                <span style={{ color: 'var(--color-accent)', fontSize: 20, lineHeight: 1 }}>{faqOpen === index ? '–' : '+'}</span>
-              </button>
-              {faqOpen === index ? (
-                <p className="text-muted" style={{ fontSize: 14, margin: '0 0 20px', maxWidth: '70ch' }}>{item.a}</p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* — bannière d'appel à l'action — */}
       <section style={{ marginTop: 88, background: 'var(--color-accent)', color: 'var(--color-bg)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '72px 32px' }}>
@@ -606,26 +567,25 @@ export default function LandingPage() {
           <div>
             <h6 style={{ marginBottom: 14 }}>{t.footer.c2}</h6>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
-              <li><a href="#faq" className="link-plain">{t.footer.c2a}</a></li>
               <li><a href="#acces" className="link-plain">{t.footer.c2b}</a></li>
-              <li><a href="#faq" className="link-plain">{t.footer.c2c}</a></li>
+              <li><a href="#acces" className="link-plain">{t.footer.c2c}</a></li>
             </ul>
           </div>
           <div>
             <h6 style={{ marginBottom: 14 }}>{t.footer.c3}</h6>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
-              <li><a href="#faq" className="link-plain">{t.footer.c3a}</a></li>
-              <li><a href="#faq" className="link-plain">{t.footer.c3b}</a></li>
-              <li><a href="#faq" className="link-plain">{t.footer.c3c}</a></li>
+              <li><a href="#acces" className="link-plain">{t.footer.c3a}</a></li>
+              <li><a href="#acces" className="link-plain">{t.footer.c3b}</a></li>
+              <li><a href="#acces" className="link-plain">{t.footer.c3c}</a></li>
             </ul>
           </div>
         </div>
         <div style={{ borderTop: '1px solid var(--color-divider)' }}>
           <div className="text-muted" style={{ maxWidth: 1280, margin: '0 auto', padding: '18px 32px 40px', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12 }}>
             <span>{t.footer.legal}</span>
-            <a href="#faq" style={{ color: 'inherit' }}>{t.footer.l1}</a>
-            <a href="#faq" style={{ color: 'inherit' }}>{t.footer.l2}</a>
-            <a href="#faq" style={{ color: 'inherit' }}>{t.footer.l3}</a>
+            <a href="#acces" style={{ color: 'inherit' }}>{t.footer.l1}</a>
+            <a href="#acces" style={{ color: 'inherit' }}>{t.footer.l2}</a>
+            <a href="#acces" style={{ color: 'inherit' }}>{t.footer.l3}</a>
           </div>
         </div>
       </footer>
