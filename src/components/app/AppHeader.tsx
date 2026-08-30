@@ -26,7 +26,7 @@ export default function AppHeader({ user, unread, newContacts }: Props) {
       <div className="app-bar-inner">
         <Link href="/app" className="brand">
           <span className="brand-mark" />
-          <span className="brand-name">ServiceNow360</span>
+          <span className="brand-name">ServiceDesk360</span>
         </Link>
 
         <nav className="app-nav">

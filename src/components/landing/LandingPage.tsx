@@ -222,7 +222,7 @@ export default function LandingPage() {
           <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'var(--color-text)' }}>
             <span style={{ width: 18, height: 18, background: 'var(--color-accent)', display: 'block' }} />
             <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.02em' }}>
-              ServiceNow360
+              ServiceDesk360
             </span>
           </a>
           <nav style={{ display: 'flex', gap: 24, marginLeft: 8, flexWrap: 'wrap' }}>

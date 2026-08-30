@@ -8,7 +8,7 @@ export const DICT = {
     hero: {
       kicker: 'Gestion des projets et des tickets',
       title: 'Pilotez vos projets et vos tickets au même endroit',
-      sub: "ServiceNow360 réunit le suivi de projet et le traitement des demandes dans un espace de travail unique, du signalement à la mise en production.",
+      sub: "ServiceDesk360 réunit le suivi de projet et le traitement des demandes dans un espace de travail unique, du signalement à la mise en production.",
       b1: 'Un portail de demandes unique : incidents, évolutions et nouvelles demandes suivis en temps réel.',
       b2: 'Des tickets rattachés aux projets, avec priorité, SLA et responsable clairement identifiés.',
       b3: 'Des tableaux de bord partagés entre équipes support, chefs de projet et direction.',
@@ -130,7 +130,7 @@ export const DICT = {
     hero: {
       kicker: 'Project and ticket management',
       title: 'Run your projects and tickets in one place',
-      sub: 'ServiceNow360 brings project tracking and request handling into a single workspace, from the first report to release.',
+      sub: 'ServiceDesk360 brings project tracking and request handling into a single workspace, from the first report to release.',
       b1: 'One request portal: incidents, change requests and new demands tracked in real time.',
       b2: 'Tickets tied to projects, with priority, SLA and owner clearly assigned.',
       b3: 'Dashboards shared across support teams, project managers and leadership.',
