@@ -1,6 +1,7 @@
 # ServiceNow360
 
-**En ligne : https://servicedesk360-rosy.vercel.app** — dépôt : https://github.com/mabounas/ServiceNow360
+**En ligne : https://servicedesk.parcelinksystems.com** — dépôt : https://github.com/mabounas/ServiceNow360
+Déploiement : VPS OVH, voir [`deploy/README.md`](deploy/README.md).
 
 Portail client de **gestion des anomalies (tickets)** et de **suivi de projet (planning / diagramme de Gantt)**,
 réalisé d'après le cahier des charges *Portail Client de Gestion des Anomalies et Module de Suivi de Projet* (v0.1).
@@ -21,7 +22,7 @@ toute l'application consomme ses tokens.
 | Base de données | PostgreSQL via Prisma |
 | Authentification | Session JWT signée (`jose`) en cookie httpOnly, mots de passe `bcrypt` |
 | Notifications | In-app (systématique) + e-mail SMTP via `nodemailer` (optionnel) |
-| Hébergement | Vercel (serverless, région `cdg1`) + PostgreSQL Neon |
+| Hébergement | VPS OVH (Ubuntu 26.04) — Nginx + systemd + PostgreSQL 18 local |
 
 ## Démarrage
 
