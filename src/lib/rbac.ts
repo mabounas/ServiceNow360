@@ -71,6 +71,8 @@ export function canManageMembers(user: SessionUser, role: EffectiveRole) {
  * Filtre Prisma traduisant le tableau de visibilité §2.5.
  *
  * - USER        : uniquement les tickets qu'il a créés
+ * - MEMBER      : tous les tickets du projet, mais sans droit d'arbitrage ni de
+ *                 qualification — il participe, il ne pilote pas
  * - SUPERVISOR  : tous les tickets du projet
  * - TECHNICIAN  : les tickets qui lui sont assignés, plus la file non assignée
  *                 en début de circuit (sans quoi personne ne peut qualifier)
@@ -83,6 +85,7 @@ export function ticketScope(projectId: string, role: EffectiveRole, userId: stri
     case 'ADMIN':
     case 'PROJECT_MANAGER':
     case 'SUPERVISOR':
+    case 'MEMBER':
       return base;
     case 'TECHNICIAN':
       return {

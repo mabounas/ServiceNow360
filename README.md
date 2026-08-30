@@ -114,7 +114,8 @@ Visibilité appliquée (§2.5) :
 | Rôle | Tickets visibles | Planning |
 | --- | --- | --- |
 | Utilisateur standard | uniquement ceux qu'il a créés | lecture seule + commentaires |
-| Superviseur | tous ceux du projet | lecture seule + commentaires |
+| Membre | tous ceux du projet ; agit sur ceux qui lui sont assignés | lecture seule + commentaires |
+| Superviseur | tous ceux du projet, avec arbitrage des évolutions | lecture seule + commentaires |
 | Technicien IT | ceux qui lui sont assignés **et la file non assignée à qualifier** | lecture |
 | Chef de projet | tous ceux du projet | création / modification complète |
 | Administrateur | tous, tous projets | tous les plannings |

@@ -73,6 +73,7 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
 
 export const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
   USER: 'Utilisateur standard',
+  MEMBER: 'Membre',
   SUPERVISOR: 'Superviseur',
   TECHNICIAN: 'Technicien IT',
   PROJECT_MANAGER: 'Chef de projet',

@@ -22,6 +22,7 @@ enum AccountStatus {
 
 enum ProjectRole {
   USER // utilisateur standard (client) — voit ses propres tickets
+  MEMBER // membre de l'équipe projet — voit tous les tickets, participe sans arbitrer
   SUPERVISOR // superviseur — voit tous les tickets du projet
   TECHNICIAN // technicien IT — traite les tickets assignés
   PROJECT_MANAGER // chef de projet — pilote le planning et arbitre
