@@ -28,6 +28,18 @@ Pour héberger une autre application sur le même serveur, il suffit de reprendr
 avec un port interne différent (3002, 3003…), une base dédiée et un nouveau bloc `server`
 Nginx portant son propre `server_name`.
 
+## HTTPS obligatoire
+
+Le cookie de session est émis avec l'attribut `Secure` en production : servi en clair, il est
+rejeté par le navigateur et **la connexion échoue en silence** — le formulaire semble ne rien faire.
+Deux garde-fous sont en place :
+
+- Nginx redirige tout le trafic HTTP en 301 vers HTTPS ;
+- l'en-tête `Strict-Transport-Security: max-age=31536000` est servi sur le bloc HTTPS, si bien que
+  le navigateur bascule de lui-même en HTTPS pour ce domaine, sans même émettre de requête en clair.
+
+Ne pas retirer cet en-tête : c'est ce qui empêche un onglet ou un favori en `http://` de revenir.
+
 ## Mettre à jour l'application
 
 ```bash
