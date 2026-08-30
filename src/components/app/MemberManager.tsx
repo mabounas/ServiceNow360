@@ -26,7 +26,7 @@ export default function MemberManager({
   const router = useRouter();
   const [members, setMembers] = useState(initial);
   const [userId, setUserId] = useState('');
-  const [role, setRole] = useState<ProjectRole>('USER');
+  const [role, setRole] = useState<ProjectRole>('MEMBER');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 

@@ -109,8 +109,8 @@ async function main() {
     ['tech', project.id, 'TECHNICIAN'],
     ['tech2', project.id, 'TECHNICIAN'],
     ['supervisor', project.id, 'SUPERVISOR'],
-    ['user', project.id, 'USER'],
-    ['user2', project.id, 'USER'],
+    ['user', project.id, 'MEMBER'],
+    ['user2', project.id, 'MEMBER'],
     ['pm', secondProject.id, 'PROJECT_MANAGER'],
     ['velum', secondProject.id, 'SUPERVISOR'],
   ];

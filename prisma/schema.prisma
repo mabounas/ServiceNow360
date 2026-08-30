@@ -21,8 +21,7 @@ enum AccountStatus {
 }
 
 enum ProjectRole {
-  USER // utilisateur standard (client) — voit ses propres tickets
-  MEMBER // membre de l'équipe projet — voit tous les tickets, participe sans arbitrer
+  MEMBER // membre — déclare des tickets et suit les siens uniquement
   SUPERVISOR // superviseur — voit tous les tickets du projet
   TECHNICIAN // technicien IT — traite les tickets assignés
   PROJECT_MANAGER // chef de projet — pilote le planning et arbitre
@@ -82,7 +81,7 @@ model ProjectMember {
   id        String      @id @default(cuid())
   projectId String
   userId    String
-  role      ProjectRole @default(USER)
+  role      ProjectRole @default(MEMBER)
   createdAt DateTime    @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: Params) {
 
     const body = await request.json();
     const userId = String(body.userId ?? '');
-    const role = body.role ?? 'USER';
+    const role = body.role ?? 'MEMBER';
     const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, status: true } });
     if (!target) return fail(404, 'Utilisateur introuvable.');
 

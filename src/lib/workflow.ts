@@ -4,7 +4,7 @@ import type { TicketStatus, TicketType } from '@prisma/client';
  * Rôle effectif d'un utilisateur sur un projet donné.
  * ADMIN est un rôle global (§2.5 du cahier des charges).
  */
-export type EffectiveRole = 'ADMIN' | 'PROJECT_MANAGER' | 'SUPERVISOR' | 'TECHNICIAN' | 'MEMBER' | 'USER';
+export type EffectiveRole = 'ADMIN' | 'PROJECT_MANAGER' | 'SUPERVISOR' | 'TECHNICIAN' | 'MEMBER';
 
 /** Acteurs autorisés à déclencher une transition. */
 type Actor = EffectiveRole | 'CREATOR' | 'ASSIGNEE';

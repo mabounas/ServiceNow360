@@ -38,7 +38,7 @@ export default function AdminUsers({
 
   const visible = users.filter((u) => filter === 'ALL' || u.status === filter);
 
-  const draftFor = (userId: string) => draft[userId] ?? { projectId: '', role: 'USER' as ProjectRole };
+  const draftFor = (userId: string) => draft[userId] ?? { projectId: '', role: 'MEMBER' as ProjectRole };
   const setDraftFor = (userId: string, patch: Partial<{ projectId: string; role: ProjectRole }>) =>
     setDraft((current) => ({ ...current, [userId]: { ...draftFor(userId), ...patch } }));
 

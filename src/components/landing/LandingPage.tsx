@@ -684,7 +684,7 @@ export default function LandingPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <span style={{ width: 16, height: 16, background: 'var(--color-accent)', display: 'block' }} />
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16 }}>ServiceNow360</span>
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16 }}>ServiceDesk360</span>
             </div>
             <p className="text-muted" style={{ fontSize: 13, maxWidth: '30ch', margin: 0 }}>{t.footer.blurb}</p>
           </div>
