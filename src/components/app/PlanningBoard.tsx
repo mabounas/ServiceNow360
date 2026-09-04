@@ -240,6 +240,9 @@ export default function PlanningBoard({
               <button type="button" className="btn btn-secondary" onClick={saveBaseline} disabled={busy}>
                 Figer une version
               </button>
+              <a className="btn btn-secondary" href={`/app/projets/${projectId}/planning/import`}>
+                Importer un planning
+              </a>
               <button type="button" className="btn btn-primary" onClick={() => setShowCreate((v) => !v)}>
                 {showCreate ? 'Fermer' : 'Ajouter une tâche'}
               </button>
