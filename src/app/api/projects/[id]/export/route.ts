@@ -14,6 +14,7 @@ import {
   fullName,
 } from '@/lib/labels';
 import { slaState, SLA_STATE_LABEL } from '@/lib/sla';
+import { buildPlanWorkbook } from '@/lib/planExport';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -78,6 +79,42 @@ export async function GET(request: Request, { params }: Params) {
           { key: 'satisfaction', label: 'Satisfaction /5' },
         ]),
       );
+    }
+
+    if (dataset === 'tasks' && url.searchParams.get('format') === 'xlsx') {
+      const [full, tasks] = await Promise.all([
+        prisma.project.findUnique({ where: { id }, select: { code: true, name: true, clientName: true } }),
+        prisma.task.findMany({
+          where: { projectId: id },
+          include: { owner: { select: { firstName: true, lastName: true } } },
+          orderBy: [{ sortOrder: 'asc' }],
+        }),
+      ]);
+      if (!full) return fail(404, 'Projet introuvable.');
+
+      const workbook = await buildPlanWorkbook(
+        full,
+        tasks.map((t) => ({
+          id: t.id,
+          parentId: t.parentId,
+          name: t.name,
+          description: t.description,
+          ownerName: t.owner ? fullName(t.owner) : null,
+          startDate: t.startDate,
+          endDate: t.endDate,
+          progress: t.progress,
+          status: t.status,
+          isMilestone: t.isMilestone,
+          sortOrder: t.sortOrder,
+        })),
+      );
+
+      return new Response(new Uint8Array(workbook), {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': `attachment; filename="planning-${full.code}-${stamp}.xlsx"`,
+        },
+      });
     }
 
     if (dataset === 'tasks') {

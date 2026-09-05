@@ -229,6 +229,9 @@ export default function PlanningBoard({
           <button type="button" className="btn btn-secondary" onClick={exportPng}>
             Exporter le Gantt (PNG)
           </button>
+          <a className="btn btn-secondary" href={`/api/projects/${projectId}/export?dataset=tasks&format=xlsx`}>
+            Exporter (Excel)
+          </a>
           <a className="btn btn-secondary" href={`/api/projects/${projectId}/export?dataset=tasks`}>
             Exporter (CSV)
           </a>
