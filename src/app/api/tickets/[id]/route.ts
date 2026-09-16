@@ -18,6 +18,43 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 /**
+ * Suppression définitive d'un ticket et de tout son historique (commentaires,
+ * journal des changements, pièces jointes — supprimés en cascade).
+ *
+ * Réservée à l'administrateur, et interdite une fois le ticket clôturé : un
+ * ticket clôturé fait partie de l'historique contractuel du projet.
+ */
+export async function DELETE(_request: Request, { params }: Params) {
+  return handle(async () => {
+    const user = await requireUser();
+    if (!user.isAdmin) return fail(403, 'Seul un administrateur peut supprimer un ticket.');
+
+    const { id } = await params;
+    const { ticket } = await requireTicketAccess(user, id);
+    if (ticket.status === 'CLOSED') {
+      return fail(409, 'Un ticket clôturé ne peut pas être supprimé.');
+    }
+
+    await prisma.$transaction([
+      // Les notifications ne référencent le ticket que par leur lien : on les retire aussi.
+      prisma.notification.deleteMany({ where: { link: `/app/tickets/${id}` } }),
+      prisma.ticket.delete({ where: { id } }),
+    ]);
+
+    // La trace de la suppression elle-même est conservée dans le journal d'audit.
+    await audit({
+      userId: user.id,
+      action: 'ticket.delete',
+      entity: 'Ticket',
+      entityId: id,
+      meta: { reference: ticket.reference, title: ticket.title, status: ticket.status, projectId: ticket.projectId },
+    });
+
+    return ok({ ok: true, projectId: ticket.projectId });
+  });
+}
+
+/**
  * Mise à jour des champs de qualification (priorité, sévérité, module, assignation
  * directe, rattachement à une tâche du planning). Réservée à l'équipe projet.
  */

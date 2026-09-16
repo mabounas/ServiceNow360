@@ -18,6 +18,7 @@ import TicketActions from '@/components/app/TicketActions';
 import TicketQualification from '@/components/app/TicketQualification';
 import CommentForm from '@/components/app/CommentForm';
 import SatisfactionForm from '@/components/app/SatisfactionForm';
+import TicketDelete from '@/components/app/TicketDelete';
 
 export const dynamic = 'force-dynamic';
 
@@ -331,6 +332,17 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
                   members={memberOptions}
                   tasks={tasks}
                 />
+              </div>
+            </div>
+          ) : null}
+
+          {user.isAdmin && ticket.status !== 'CLOSED' ? (
+            <div className="panel">
+              <div className="panel-head">
+                <h3 className="panel-title">Administration</h3>
+              </div>
+              <div className="panel-body">
+                <TicketDelete ticketId={ticket.id} reference={ticket.reference} projectId={ticket.projectId} />
               </div>
             </div>
           ) : null}
