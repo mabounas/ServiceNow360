@@ -15,7 +15,7 @@ export type ExportTask = {
   parentId: string | null;
   name: string;
   description: string | null;
-  ownerName: string | null;
+  ownerLabel: string | null;
   startDate: Date;
   endDate: Date;
   progress: number;
@@ -41,11 +41,8 @@ function mondayOf(date: Date) {
   return d;
 }
 
-/** Le libellé du responsable est reporté dans la description à l'import ; on sait le relire. */
 function ownerLabel(task: ExportTask) {
-  if (task.ownerName) return task.ownerName;
-  const match = task.description?.match(/Responsable au planning source\s*:\s*(.+)/i);
-  return match ? match[1].trim() : '';
+  return task.ownerLabel ?? '';
 }
 
 export async function buildPlanWorkbook(

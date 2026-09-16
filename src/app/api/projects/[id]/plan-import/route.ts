@@ -89,9 +89,7 @@ export async function POST(request: Request, { params }: Params) {
               projectId: id,
               parentId: parent.id,
               name: task.name,
-              // Le responsable du fichier est un rôle, pas un compte : on le
-              // conserve en clair pour pouvoir l'affecter ensuite.
-              description: task.ownerLabel ? `Responsable au planning source : ${task.ownerLabel}` : null,
+              ownerLabel: task.ownerLabel?.slice(0, 120) ?? null,
               startDate: new Date(task.startDate),
               endDate: new Date(task.endDate),
               isMilestone: task.isMilestone,

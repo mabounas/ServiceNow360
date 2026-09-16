@@ -13,7 +13,7 @@ export async function POST(request: Request, { params }: Params) {
     const user = await requireUser();
     const { id } = await params;
 
-    const task = await prisma.task.findUnique({ where: { id }, select: { id: true, name: true, projectId: true, ownerId: true } });
+    const task = await prisma.task.findUnique({ where: { id }, select: { id: true, name: true, projectId: true } });
     if (!task) return fail(404, 'Tâche introuvable.');
     await getProjectAccess(user, task.projectId);
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: Params) {
       select: { userId: true },
     });
     await notify({
-      userIds: [...managers.map((m) => m.userId), task.ownerId ?? ''].filter((uid) => uid && uid !== user.id),
+      userIds: managers.map((m) => m.userId).filter((uid) => uid !== user.id),
       title: `Commentaire sur « ${task.name} »`,
       body: `${fullName(user)} : ${text.slice(0, 240)}`,
       link: `/app/projets/${task.projectId}/planning`,

@@ -99,7 +99,6 @@ export async function GET(request: Request, { params }: Params) {
         prisma.project.findUnique({ where: { id }, select: { code: true, name: true, clientName: true } }),
         prisma.task.findMany({
           where: { projectId: id },
-          include: { owner: { select: { firstName: true, lastName: true } } },
           orderBy: [{ sortOrder: 'asc' }],
         }),
       ]);
@@ -113,7 +112,7 @@ export async function GET(request: Request, { params }: Params) {
           parentId: t.parentId,
           name: t.name,
           description: t.description,
-          ownerName: t.owner ? fullName(t.owner) : null,
+          ownerLabel: t.ownerLabel,
           startDate: t.startDate,
           endDate: t.endDate,
           ...shown(t),
@@ -133,7 +132,7 @@ export async function GET(request: Request, { params }: Params) {
     if (dataset === 'tasks') {
       const tasks = await prisma.task.findMany({
         where: { projectId: id },
-        include: { owner: { select: { firstName: true, lastName: true } }, parent: { select: { name: true } } },
+        include: { parent: { select: { name: true } } },
         orderBy: [{ sortOrder: 'asc' }],
       });
 
@@ -142,7 +141,7 @@ export async function GET(request: Request, { params }: Params) {
         nom: t.name,
         parent: t.parent?.name ?? '',
         type: t.isMilestone ? 'Jalon' : 'Tâche',
-        responsable: t.owner ? fullName(t.owner) : '',
+        responsable: t.ownerLabel ?? '',
         debut: formatDate(t.startDate),
         fin: formatDate(t.endDate),
         avancement: `${shown(t).progress} %`,

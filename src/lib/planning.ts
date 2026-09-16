@@ -10,8 +10,8 @@ export type PlanTask = {
   status: TaskStatus;
   isMilestone: boolean;
   sortOrder: number;
-  ownerName?: string | null;
-  ownerId?: string | null;
+  /** Responsable saisi librement, sans lien avec un compte. */
+  ownerLabel?: string | null;
   description?: string | null;
   comments?: TaskNote[];
   /** Nombre de PV de réunion actifs (non archivés). */
@@ -45,14 +45,19 @@ export function durationDays(task: PlanTask) {
   return task.isMilestone ? 0 : Math.max(1, dayDiff(task.startDate, task.endDate) + 1);
 }
 
-/**
- * Responsable affiché d'une tâche : le compte affecté, à défaut le libellé
- * repris du planning importé (« Parcelink Team », « IT Globex »…).
- */
-export function ownerLabelOf(task: PlanTask): { label: string; fromSource: boolean } | null {
-  if (task.ownerName) return { label: task.ownerName, fromSource: false };
-  const match = task.description?.match(/Responsable au planning source\s*:\s*(.+)/i);
-  return match ? { label: match[1].trim(), fromSource: true } : null;
+/** Responsable d'une tâche (texte libre), ou `null` s'il n'est pas renseigné. */
+export function ownerLabelOf(task: PlanTask): string | null {
+  return task.ownerLabel?.trim() || null;
+}
+
+/** Initiales affichées dans la liste WBS (« Parcelink Team » → « PT »). */
+export function ownerInitials(label: string) {
+  return label
+    .split(/[\s/&-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
 }
 
 /** Arbre WBS ordonné (phases > lots > tâches > sous-tâches). */

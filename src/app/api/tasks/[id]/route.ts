@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { assertAssignable, canEditPlanning, getProjectAccess } from '@/lib/rbac';
+import { canEditPlanning, getProjectAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { audit } from '@/lib/audit';
 import type { Prisma } from '@prisma/client';
@@ -32,9 +32,10 @@ export async function PATCH(request: Request, { params }: Params) {
     if (body.isMilestone !== undefined) data.isMilestone = Boolean(body.isMilestone);
     if (body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder);
 
-    if (body.ownerId !== undefined) {
-      if (body.ownerId) await assertAssignable(task.projectId, String(body.ownerId));
-      data.owner = body.ownerId ? { connect: { id: String(body.ownerId) } } : { disconnect: true };
+    if (body.ownerLabel !== undefined) {
+      const label = String(body.ownerLabel ?? '').trim();
+      if (label.length > 120) return fail(400, 'Le nom du responsable est trop long (120 caractères maximum).');
+      data.ownerLabel = label || null;
     }
 
     let start = task.startDate;

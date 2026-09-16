@@ -49,6 +49,21 @@ sudo bash /srv/servicenow360/app/deploy/redeploy.sh
 Le script récupère `main`, réinstalle les dépendances, applique le schéma Prisma,
 reconstruit et redémarre le service.
 
+## Migrations de données
+
+`prisma db push` fait évoluer la structure, pas le contenu. Quand une évolution
+demande de transformer des données existantes, un script SQL rejouable est déposé
+dans `deploy/migrations/` et s'exécute une fois après le déploiement :
+
+```bash
+sudo -u postgres pg_dump -Fc servicenow360 > /var/backups/servicenow360-avant-migration.dump
+sudo -u postgres psql -d servicenow360 -v ON_ERROR_STOP=1 -f deploy/migrations/<fichier>.sql
+```
+
+| Fichier | Objet |
+| --- | --- |
+| `2026-09-17-task-owner-label.sql` | Responsable de tâche en texte libre : reprise du nom du compte affecté et du libellé importé |
+
 ## Exploitation courante
 
 ```bash

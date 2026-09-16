@@ -16,7 +16,7 @@ import {
 type Params = { params: Promise<{ id: string }> };
 
 async function loadTask(id: string) {
-  return prisma.task.findUnique({ where: { id }, select: { id: true, name: true, projectId: true, ownerId: true } });
+  return prisma.task.findUnique({ where: { id }, select: { id: true, name: true, projectId: true } });
 }
 
 /** PV de réunion d'une tâche (actifs par défaut, `?archive=all|archived`). */
@@ -69,7 +69,7 @@ export async function POST(request: Request, { params }: Params) {
       select: { userId: true },
     });
     await notify({
-      userIds: [...audience.map((m) => m.userId), task.ownerId ?? ''].filter((uid) => uid && uid !== user.id),
+      userIds: audience.map((m) => m.userId).filter((uid) => uid !== user.id),
       title: `PV de réunion — ${task.name}`,
       body: `${fullName(user)} a publié « ${meeting.title} » (réunion du ${formatDate(meeting.meetingDate)}).`,
       link: `/app/reunions/${meeting.id}`,

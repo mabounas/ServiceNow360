@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { assertAssignable, canEditPlanning, getProjectAccess } from '@/lib/rbac';
+import { canEditPlanning, getProjectAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { audit } from '@/lib/audit';
 
@@ -15,7 +15,6 @@ export async function GET(_request: Request, { params }: Params) {
     const [tasks, dependencies] = await Promise.all([
       prisma.task.findMany({
         where: { projectId: id },
-        include: { owner: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: [{ sortOrder: 'asc' }, { startDate: 'asc' }],
       }),
       prisma.taskDependency.findMany({ where: { predecessor: { projectId: id } } }),
@@ -47,7 +46,8 @@ export async function POST(request: Request, { params }: Params) {
       if (!parent) return fail(400, "La tâche parente n'appartient pas au projet.");
     }
 
-    if (body.ownerId) await assertAssignable(id, String(body.ownerId));
+    const ownerLabel = String(body.ownerLabel ?? '').trim();
+    if (ownerLabel.length > 120) return fail(400, 'Le nom du responsable est trop long (120 caractères maximum).');
 
     const last = await prisma.task.findFirst({
       where: { projectId: id, parentId: body.parentId || null },
@@ -61,7 +61,7 @@ export async function POST(request: Request, { params }: Params) {
         parentId: body.parentId || null,
         name,
         description: body.description ? String(body.description).trim() : null,
-        ownerId: body.ownerId || null,
+        ownerLabel: ownerLabel || null,
         startDate,
         endDate,
         progress: Math.min(100, Math.max(0, Number(body.progress ?? 0))),

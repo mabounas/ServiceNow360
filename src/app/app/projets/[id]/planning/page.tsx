@@ -17,7 +17,6 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
     prisma.task.findMany({
       where: { projectId: id },
       include: {
-        owner: { select: { id: true, firstName: true, lastName: true } },
         comments: {
           include: { author: { select: { firstName: true, lastName: true } } },
           orderBy: { createdAt: 'asc' },
@@ -49,8 +48,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
     status: t.status,
     isMilestone: t.isMilestone,
     sortOrder: t.sortOrder,
-    ownerId: t.ownerId,
-    ownerName: t.owner ? fullName(t.owner) : null,
+    ownerLabel: t.ownerLabel,
     description: t.description,
     meetingCount: meetingsByTask.get(t.id) ?? 0,
     comments: t.comments.map((c) => ({

@@ -11,6 +11,7 @@ import {
   criticalPath,
   derivedStatus,
   lateTasks,
+  ownerInitials,
   ownerLabelOf,
   rollupProgress,
   type PlanDependency,
@@ -26,7 +27,7 @@ const EMPTY_TASK = {
   name: '',
   description: '',
   parentId: '',
-  ownerId: '',
+  ownerLabel: '',
   startDate: new Date().toISOString().slice(0, 10),
   endDate: new Date(Date.now() + 4 * 86_400_000).toISOString().slice(0, 10),
   progress: 0,
@@ -76,6 +77,14 @@ export default function PlanningBoard({
   const selectedIsParent = selected ? parentIds.has(selected.id) : false;
   const selectedProgress = selected ? progressOf.get(selected.id) ?? 0 : 0;
   const hovered = hover ? tasks.find((t) => t.id === hover.id) ?? null : null;
+  // Suggestions de saisie : responsables déjà utilisés sur le projet, puis membres de l'équipe.
+  const ownerSuggestions = useMemo(
+    () =>
+      [...new Set([...tasks.map((t) => ownerLabelOf(t)).filter(Boolean), ...members.map((m) => m.name)] as string[])].sort(
+        (a, b) => a.localeCompare(b, 'fr'),
+      ),
+    [tasks, members],
+  );
   const progress = rollupProgress(tasks);
 
   const setMeetingCount = useCallback((taskId: string, count: number) => {
@@ -121,7 +130,7 @@ export default function PlanningBoard({
     if (!data) router.refresh();
   }
 
-  async function saveSelected(patch: Partial<PlanTask> & { ownerId?: string | null }) {
+  async function saveSelected(patch: Partial<PlanTask>) {
     if (!selected) return;
     const data = await call(`/api/tasks/${selected.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
     if (!data) return;
@@ -141,16 +150,17 @@ export default function PlanningBoard({
     router.refresh();
   }
 
-  async function setOwner(ownerId: string) {
+  async function setOwner(value: string) {
     if (!selected) return;
+    const ownerLabel = value.trim();
+    if (ownerLabel === (selected.ownerLabel ?? '')) return;
     const data = await call(`/api/tasks/${selected.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ ownerId: ownerId || null }),
+      body: JSON.stringify({ ownerLabel }),
     });
     if (!data) return;
-    const ownerName = members.find((m) => m.id === ownerId)?.name ?? null;
     setTasks((current) =>
-      current.map((t) => (t.id === selected.id ? { ...t, ownerId: ownerId || null, ownerName } : t)),
+      current.map((t) => (t.id === selected.id ? { ...t, ownerLabel: ownerLabel || null } : t)),
     );
   }
 
@@ -161,7 +171,7 @@ export default function PlanningBoard({
       body: JSON.stringify({
         ...draft,
         parentId: draft.parentId || null,
-        ownerId: draft.ownerId || null,
+        ownerLabel: draft.ownerLabel.trim(),
         endDate: draft.isMilestone ? draft.startDate : draft.endDate,
       }),
     });
@@ -178,8 +188,7 @@ export default function PlanningBoard({
         status: data.task.status,
         isMilestone: data.task.isMilestone,
         sortOrder: data.task.sortOrder,
-        ownerId: data.task.ownerId,
-        ownerName: members.find((m) => m.id === data.task.ownerId)?.name ?? null,
+        ownerLabel: data.task.ownerLabel,
       },
     ]);
     setDraft(EMPTY_TASK);
@@ -358,14 +367,15 @@ export default function PlanningBoard({
               </div>
               <div className="field">
                 <label htmlFor="n-owner">Responsable</label>
-                <select className="input" id="n-owner" value={draft.ownerId} onChange={(e) => setDraft({ ...draft, ownerId: e.target.value })}>
-                  <option value="">— Non défini —</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  className="input"
+                  id="n-owner"
+                  list="owner-suggestions"
+                  maxLength={120}
+                  placeholder="Nom, équipe ou société"
+                  value={draft.ownerLabel}
+                  onChange={(e) => setDraft({ ...draft, ownerLabel: e.target.value })}
+                />
               </div>
               <div className="field">
                 <label htmlFor="n-start">Début</label>
@@ -424,19 +434,9 @@ export default function PlanningBoard({
                 {(() => {
                   const owner = ownerLabelOf(task);
                   if (!owner) return null;
-                  const initials = owner.label
-                    .split(/[\s/&-]+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((w) => w[0]!.toUpperCase())
-                    .join('');
                   return (
-                    <span
-                      className="owner-chip"
-                      title={`Responsable : ${owner.label}${owner.fromSource ? ' (planning importé)' : ''}`}
-                      style={owner.fromSource ? { borderStyle: 'dashed' } : undefined}
-                    >
-                      {initials}
+                    <span className="owner-chip" title={`Responsable : ${owner}`}>
+                      {ownerInitials(owner)}
                     </span>
                   );
                 })()}
@@ -494,8 +494,7 @@ export default function PlanningBoard({
             const owner = ownerLabelOf(hovered);
             return (
               <div className="small mt-8">
-                Responsable : <strong>{owner ? owner.label : 'non affecté'}</strong>
-                {owner?.fromSource ? <span className="muted"> (repris du planning importé)</span> : null}
+                Responsable : <strong>{owner ?? 'non renseigné'}</strong>
               </div>
             );
           })()}
@@ -516,6 +515,12 @@ export default function PlanningBoard({
           )}
         </div>
       ) : null}
+
+      <datalist id="owner-suggestions">
+        {ownerSuggestions.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
 
       <div className="gantt-legend">
         <span>
@@ -562,25 +567,20 @@ export default function PlanningBoard({
                 </div>
                 <div className="field span-2">
                   <label htmlFor="e-owner">Responsable</label>
-                  <select
+                  <input
                     className="input"
                     id="e-owner"
-                    key={`o-${selected.id}-${selected.ownerId ?? ''}`}
-                    defaultValue={selected.ownerId ?? ''}
-                    onChange={(e) => setOwner(e.target.value)}
-                  >
-                    <option value="">— Non affecté —</option>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                  {!selected.ownerId && ownerLabelOf(selected)?.fromSource ? (
-                    <div className="field-hint">
-                      Au planning importé : « {ownerLabelOf(selected)!.label} ». Choisissez la personne correspondante.
-                    </div>
-                  ) : null}
+                    list="owner-suggestions"
+                    maxLength={120}
+                    placeholder="Nom, équipe ou société — interne ou externe au projet"
+                    key={`o-${selected.id}-${selected.ownerLabel ?? ''}`}
+                    defaultValue={selected.ownerLabel ?? ''}
+                    onBlur={(e) => setOwner(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    }}
+                  />
+                  <div className="field-hint">Texte libre, enregistré en quittant le champ ou avec Entrée.</div>
                 </div>
                 <div className="field">
                   <label htmlFor="e-start">Début</label>
@@ -655,7 +655,7 @@ export default function PlanningBoard({
               </div>
             ) : (
               <div className="small muted">
-                Responsable : <strong>{ownerLabelOf(selected)?.label ?? 'non affecté'}</strong> ·{' '}
+                Responsable : <strong>{ownerLabelOf(selected) ?? 'non renseigné'}</strong> ·{' '}
                 Statut : {TASK_STATUS_LABEL[derivedStatus(selected, selectedProgress, selectedIsParent)]} — avancement{' '}
                 <strong style={{ color: progressColor(selectedProgress) }}>{selectedProgress} %</strong>. Le planning est en
                 lecture seule pour votre rôle ; vous pouvez commenter cette tâche.

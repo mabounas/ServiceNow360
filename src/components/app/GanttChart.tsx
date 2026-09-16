@@ -267,7 +267,7 @@ export default function GanttChart({
         const done = progress >= 100;
         const notes = task.comments?.length ?? 0;
         const owner = ownerLabelOf(task);
-        const ownerText = owner ? ` · ${owner.label}` : '';
+        const ownerText = owner ? ` · ${owner}` : '';
         const hover = {
           onPointerEnter: (e: React.PointerEvent) => onHover?.({ id: task.id, x: e.clientX, y: e.clientY }),
           onPointerMove: (e: React.PointerEvent) => onHover?.({ id: task.id, x: e.clientX, y: e.clientY }),
@@ -361,7 +361,7 @@ export default function GanttChart({
             >
               {progress}%
               {owner ? (
-                <tspan fill={COLORS.text} fontWeight={600} fontStyle={owner.fromSource ? 'italic' : 'normal'}>
+                <tspan fill={COLORS.text} fontWeight={600}>
                   {ownerText}
                 </tspan>
               ) : null}

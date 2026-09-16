@@ -166,7 +166,7 @@ async function main() {
           progress: phase.progress,
           status: phase.progress >= 100 ? 'DONE' : phase.progress > 0 ? 'IN_PROGRESS' : 'TODO',
           sortOrder: (order += 10),
-          ownerId: users.pm.id,
+          ownerLabel: 'Karim Benali',
         },
       });
       created[phase.name] = parent.id;
@@ -182,7 +182,7 @@ async function main() {
             progress: child.progress,
             status: child.progress >= 100 ? 'DONE' : child.progress > 0 ? 'IN_PROGRESS' : 'TODO',
             sortOrder: (order += 10),
-            ownerId: child.name.includes('Module') ? users.tech.id : users.pm.id,
+            ownerLabel: child.name.includes('Module') ? 'Léa Fontaine' : 'Karim Benali',
           },
         });
         created[child.name] = task.id;
