@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TaskStatus } from '@prisma/client';
 import GanttChart, { progressColor, type Zoom } from './GanttChart';
@@ -68,6 +68,7 @@ export default function PlanningBoard({
   const [comment, setComment] = useState('');
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [sliderValue, setSliderValue] = useState(0);
+  const [drawerTab, setDrawerTab] = useState<'details' | 'comments' | 'meetings'>('details');
 
   const rows = useMemo(() => buildTree(tasks), [tasks]);
   const critical = useMemo(() => criticalPath(tasks, dependencies), [tasks, dependencies]);
@@ -95,7 +96,23 @@ export default function PlanningBoard({
     );
   }, []);
 
+  function closeDrawer() {
+    setSelectedId(null);
+    setError('');
+  }
+
+  // Échap ferme le panneau de la tâche.
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDrawer();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId]);
+
   function select(id: string) {
+    setError('');
     setSelectedId(id);
     setSliderValue(tasks.find((t) => t.id === id)?.progress ?? 0);
   }
@@ -198,6 +215,11 @@ export default function PlanningBoard({
 
   async function deleteTask() {
     if (!selected) return;
+    const descendants = tasks.filter((t) => t.parentId === selected.id).length;
+    const question = descendants
+      ? `Supprimer « ${selected.name} » et ses ${descendants} sous-élément(s) ? Cette action est définitive.`
+      : `Supprimer « ${selected.name} » ? Cette action est définitive.`;
+    if (!window.confirm(question)) return;
     const data = await call(`/api/tasks/${selected.id}`, { method: 'DELETE' });
     if (!data) return;
     setTasks((current) => current.filter((t) => t.id !== selected.id && t.parentId !== selected.id));
@@ -545,152 +567,237 @@ export default function PlanningBoard({
       </div>
 
       {selected ? (
-        <div className="panel mt-24">
-          <div className="panel-head">
-            <h3 className="panel-title">{selected.name}</h3>
-            <span className="small muted">
-              {formatDate(selected.startDate)} → {formatDate(selected.endDate)}
-            </span>
-          </div>
-          <div className="panel-body">
-            {editable ? (
-              <div className="form-grid">
-                <div className="field span-2">
-                  <label htmlFor="e-name">Nom</label>
-                  <input
-                    className="input"
-                    id="e-name"
-                    defaultValue={selected.name}
-                    key={`name-${selected.id}`}
-                    onBlur={(e) => e.target.value !== selected.name && saveSelected({ name: e.target.value })}
-                  />
-                </div>
-                <div className="field span-2">
-                  <label htmlFor="e-owner">Responsable</label>
-                  <input
-                    className="input"
-                    id="e-owner"
-                    list="owner-suggestions"
-                    maxLength={120}
-                    placeholder="Nom, équipe ou société — interne ou externe au projet"
-                    key={`o-${selected.id}-${selected.ownerLabel ?? ''}`}
-                    defaultValue={selected.ownerLabel ?? ''}
-                    onBlur={(e) => setOwner(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                    }}
-                  />
-                  <div className="field-hint">Texte libre, enregistré en quittant le champ ou avec Entrée.</div>
-                </div>
-                <div className="field">
-                  <label htmlFor="e-start">Début</label>
-                  <input
-                    className="input"
-                    id="e-start"
-                    type="date"
-                    key={`start-${selected.id}-${selected.startDate}`}
-                    defaultValue={selected.startDate.slice(0, 10)}
-                    onChange={(e) => saveSelected({ startDate: new Date(e.target.value).toISOString() })}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="e-end">Fin</label>
-                  <input
-                    className="input"
-                    id="e-end"
-                    type="date"
-                    key={`end-${selected.id}-${selected.endDate}`}
-                    defaultValue={selected.endDate.slice(0, 10)}
-                    onChange={(e) => saveSelected({ endDate: new Date(e.target.value).toISOString() })}
-                  />
-                </div>
-                {selectedIsParent ? (
-                  <div className="field">
-                    <label>Avancement</label>
-                    <div style={{ fontWeight: 800, color: progressColor(selectedProgress) }}>{selectedProgress} %</div>
-                    <div className="field-hint">Calculé automatiquement : moyenne de ses sous-éléments.</div>
-                  </div>
-                ) : (
-                  <div className="field">
-                    <label htmlFor="e-progress">
-                      Avancement : <span style={{ color: progressColor(sliderValue) }}>{sliderValue} %</span>
-                    </label>
+        <aside className="task-drawer no-print" role="dialog" aria-label={`Tâche ${selected.name}`}>
+          <header className="task-drawer-head">
+            <div style={{ minWidth: 0 }}>
+              <div className="page-kicker" style={{ marginBottom: 4 }}>
+                {selected.isMilestone ? 'Jalon' : selectedIsParent ? 'Phase' : 'Tâche'}
+              </div>
+              <h3 style={{ fontSize: 20, margin: 0, overflowWrap: 'anywhere' }}>{selected.name}</h3>
+              <div className="small muted mt-8">
+                {formatDate(selected.startDate)} → {formatDate(selected.endDate)} ·{' '}
+                <strong style={{ color: progressColor(selectedProgress) }}>{selectedProgress} %</strong>
+                {ownerLabelOf(selected) ? ` · ${ownerLabelOf(selected)}` : ''}
+              </div>
+            </div>
+            <button type="button" className="btn btn-secondary btn-icon" onClick={closeDrawer} aria-label="Fermer le panneau" title="Fermer (Échap)">
+              ✕
+            </button>
+          </header>
+
+          <nav className="task-drawer-tabs" role="tablist">
+            {(
+              [
+                ['details', 'Détails'],
+                ['comments', `Commentaires (${selected.comments?.length ?? 0})`],
+                ['meetings', `Réunions (${selected.meetingCount ?? 0})`],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={drawerTab === key}
+                className={drawerTab === key ? 'is-active' : ''}
+                onClick={() => setDrawerTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="task-drawer-body">
+            {error ? <div className="alert alert-error mb-16">{error}</div> : null}
+
+            {drawerTab === 'details' ? (
+              editable ? (
+                <div className="form-grid">
+                  <div className="field span-2">
+                    <label htmlFor="e-name">Nom</label>
                     <input
                       className="input"
-                      id="e-progress"
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={5}
-                      key={`p-${selected.id}`}
-                      value={sliderValue}
-                      onChange={(e) => setSliderValue(Number(e.target.value))}
-                      onMouseUp={() => saveSelected({ progress: sliderValue })}
-                      onTouchEnd={() => saveSelected({ progress: sliderValue })}
-                      onKeyUp={() => saveSelected({ progress: sliderValue })}
+                      id="e-name"
+                      defaultValue={selected.name}
+                      key={`name-${selected.id}`}
+                      onBlur={(e) => e.target.value.trim() && e.target.value !== selected.name && saveSelected({ name: e.target.value })}
                     />
                   </div>
+                  <div className="field span-2">
+                    <label htmlFor="e-owner">Responsable</label>
+                    <input
+                      className="input"
+                      id="e-owner"
+                      list="owner-suggestions"
+                      maxLength={120}
+                      placeholder="Nom, équipe ou société — interne ou externe au projet"
+                      key={`o-${selected.id}-${selected.ownerLabel ?? ''}`}
+                      defaultValue={selected.ownerLabel ?? ''}
+                      onBlur={(e) => setOwner(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="e-start">Début</label>
+                    <input
+                      className="input"
+                      id="e-start"
+                      type="date"
+                      key={`start-${selected.id}-${selected.startDate}`}
+                      defaultValue={selected.startDate.slice(0, 10)}
+                      onChange={(e) => e.target.value && saveSelected({ startDate: new Date(e.target.value).toISOString() })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="e-end">Fin</label>
+                    <input
+                      className="input"
+                      id="e-end"
+                      type="date"
+                      disabled={selected.isMilestone}
+                      key={`end-${selected.id}-${selected.endDate}`}
+                      defaultValue={selected.endDate.slice(0, 10)}
+                      onChange={(e) => e.target.value && saveSelected({ endDate: new Date(e.target.value).toISOString() })}
+                    />
+                  </div>
+                  {selectedIsParent ? (
+                    <div className="field">
+                      <label>Avancement</label>
+                      <div style={{ fontWeight: 800, color: progressColor(selectedProgress) }}>{selectedProgress} %</div>
+                      <div className="field-hint">Calculé automatiquement : moyenne de ses sous-éléments.</div>
+                    </div>
+                  ) : (
+                    <div className="field">
+                      <label htmlFor="e-progress">
+                        Avancement : <span style={{ color: progressColor(sliderValue) }}>{sliderValue} %</span>
+                      </label>
+                      <input
+                        className="input"
+                        id="e-progress"
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        key={`p-${selected.id}`}
+                        value={sliderValue}
+                        onChange={(e) => setSliderValue(Number(e.target.value))}
+                        onMouseUp={() => saveSelected({ progress: sliderValue })}
+                        onTouchEnd={() => saveSelected({ progress: sliderValue })}
+                        onKeyUp={() => saveSelected({ progress: sliderValue })}
+                      />
+                    </div>
+                  )}
+                  <div className="field">
+                    <label htmlFor="e-status">Statut</label>
+                    {selectedIsParent ? (
+                      <div>{TASK_STATUS_LABEL[derivedStatus(selected, selectedProgress, true)]}</div>
+                    ) : (
+                      <select
+                        className="input"
+                        id="e-status"
+                        key={`s-${selected.id}-${selected.status}`}
+                        defaultValue={selected.status}
+                        onChange={(e) => saveSelected({ status: e.target.value as TaskStatus })}
+                      >
+                        {(Object.keys(TASK_STATUS_LABEL) as TaskStatus[]).map((key) => (
+                          <option key={key} value={key}>
+                            {TASK_STATUS_LABEL[key]}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="field span-2">
+                    <label htmlFor="e-description">Description</label>
+                    <textarea
+                      className="input"
+                      id="e-description"
+                      rows={4}
+                      key={`d-${selected.id}`}
+                      defaultValue={selected.description ?? ''}
+                      onBlur={(e) =>
+                        e.target.value !== (selected.description ?? '') && saveSelected({ description: e.target.value })
+                      }
+                    />
+                    <div className="field-hint">Les champs texte s’enregistrent en quittant le champ.</div>
+                  </div>
+                  <div className="field span-2">
+                    <hr className="hr" />
+                    <button type="button" className="btn btn-secondary" onClick={deleteTask} disabled={busy}>
+                      {selectedIsParent ? 'Supprimer la phase et ses sous-tâches' : 'Supprimer la tâche'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <table className="table table-compact">
+                  <tbody>
+                    <tr>
+                      <th>Responsable</th>
+                      <td>{ownerLabelOf(selected) ?? 'non renseigné'}</td>
+                    </tr>
+                    <tr>
+                      <th>Période</th>
+                      <td>
+                        {formatDate(selected.startDate)} → {formatDate(selected.endDate)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Avancement</th>
+                      <td style={{ color: progressColor(selectedProgress), fontWeight: 800 }}>{selectedProgress} %</td>
+                    </tr>
+                    <tr>
+                      <th>Statut</th>
+                      <td>{TASK_STATUS_LABEL[derivedStatus(selected, selectedProgress, selectedIsParent)]}</td>
+                    </tr>
+                    {selected.description ? (
+                      <tr>
+                        <th>Description</th>
+                        <td style={{ whiteSpace: 'pre-wrap' }}>{selected.description}</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              )
+            ) : null}
+
+            {drawerTab === 'comments' ? (
+              <div className="stack">
+                {selected.comments?.length ? (
+                  <ul className="gantt-tooltip-notes" style={{ marginTop: 0 }}>
+                    {selected.comments.map((note) => (
+                      <li key={note.id}>
+                        <span>{note.body}</span>
+                        <span className="muted small"> — {note.authorName}, {formatDateTime(note.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="small muted">Aucun commentaire sur cette tâche.</div>
                 )}
                 <div className="field">
-                  <label htmlFor="e-status">Statut</label>
-                  <select
-                    className="input"
-                    id="e-status"
-                    key={`s-${selected.id}-${selected.status}`}
-                    defaultValue={selected.status}
-                    onChange={(e) => saveSelected({ status: e.target.value as TaskStatus })}
-                  >
-                    {(Object.keys(TASK_STATUS_LABEL) as TaskStatus[]).map((key) => (
-                      <option key={key} value={key}>
-                        {TASK_STATUS_LABEL[key]}
-                      </option>
-                    ))}
-                  </select>
+                  <label htmlFor="e-comment">Ajouter un commentaire</label>
+                  <textarea className="input" id="e-comment" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} />
                 </div>
-                <div className="field span-2">
-                  <button type="button" className="btn btn-secondary" onClick={deleteTask} disabled={busy}>
-                    Supprimer la tâche
+                <div>
+                  <button type="button" className="btn btn-primary" onClick={postComment} disabled={busy || !comment.trim()}>
+                    Publier le commentaire
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="small muted">
-                Responsable : <strong>{ownerLabelOf(selected) ?? 'non renseigné'}</strong> ·{' '}
-                Statut : {TASK_STATUS_LABEL[derivedStatus(selected, selectedProgress, selectedIsParent)]} — avancement{' '}
-                <strong style={{ color: progressColor(selectedProgress) }}>{selectedProgress} %</strong>. Le planning est en
-                lecture seule pour votre rôle ; vous pouvez commenter cette tâche.
-              </div>
-            )}
-
-            <hr className="hr" />
-            {selected.comments?.length ? (
-              <ul className="gantt-tooltip-notes mb-16">
-                {selected.comments.map((note) => (
-                  <li key={note.id}>
-                    <span>{note.body}</span>
-                    <span className="muted small"> — {note.authorName}, {formatDateTime(note.createdAt)}</span>
-                  </li>
-                ))}
-              </ul>
             ) : null}
-            <div className="field">
-              <label htmlFor="e-comment">Commenter cette tâche</label>
-              <textarea className="input" id="e-comment" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} />
-            </div>
-            <button type="button" className="btn btn-primary" onClick={postComment} disabled={busy || !comment.trim()}>
-              Publier le commentaire
-            </button>
 
-            <hr className="hr" />
-            <TaskMeetings
-              key={selected.id}
-              taskId={selected.id}
-              taskName={selected.name}
-              canWrite={canWriteMeetings}
-              onCountChange={setMeetingCount}
-            />
+            {drawerTab === 'meetings' ? (
+              <TaskMeetings
+                key={selected.id}
+                taskId={selected.id}
+                taskName={selected.name}
+                canWrite={canWriteMeetings}
+                onCountChange={setMeetingCount}
+              />
+            ) : null}
           </div>
-        </div>
+        </aside>
       ) : null}
 
       {editable ? (
