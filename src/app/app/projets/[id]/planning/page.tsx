@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/auth';
 import { canEditPlanning, getProjectAccess } from '@/lib/rbac';
+import { canWriteMeetings } from '@/lib/meetings';
 import { prisma } from '@/lib/prisma';
 import PlanningBoard from '@/components/app/PlanningBoard';
 import { fullName } from '@/lib/labels';
@@ -12,7 +13,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const { role } = await getProjectAccess(user, id);
 
-  const [tasks, dependencies, members, baselines] = await Promise.all([
+  const [tasks, dependencies, members, baselines, meetingCounts] = await Promise.all([
     prisma.task.findMany({
       where: { projectId: id },
       include: {
@@ -30,7 +31,13 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
     }),
     prisma.planBaseline.findMany({ where: { projectId: id }, orderBy: { createdAt: 'desc' }, take: 10 }),
+    prisma.meetingMinute.groupBy({
+      by: ['taskId'],
+      where: { projectId: id, archived: false, taskId: { not: null } },
+      _count: { _all: true },
+    }),
   ]);
+  const meetingsByTask = new Map(meetingCounts.map((m) => [m.taskId, m._count._all]));
 
   const planTasks: PlanTask[] = tasks.map((t) => ({
     id: t.id,
@@ -45,6 +52,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
     ownerId: t.ownerId,
     ownerName: t.owner ? fullName(t.owner) : null,
     description: t.description,
+    meetingCount: meetingsByTask.get(t.id) ?? 0,
     comments: t.comments.map((c) => ({
       id: c.id,
       body: c.body,
@@ -79,6 +87,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
           snapshot: b.snapshot as unknown as { taskId: string; startDate: string; endDate: string }[],
         }))}
         editable={canEditPlanning(role)}
+        canWriteMeetings={canWriteMeetings(role)}
       />
     </>
   );

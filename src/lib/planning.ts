@@ -14,6 +14,8 @@ export type PlanTask = {
   ownerId?: string | null;
   description?: string | null;
   comments?: TaskNote[];
+  /** Nombre de PV de réunion actifs (non archivés). */
+  meetingCount?: number;
 };
 
 /** Commentaire laissé sur une tâche, affiché en info-bulle sur le planning. */

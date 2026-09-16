@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TaskStatus } from '@prisma/client';
 import GanttChart, { progressColor, type Zoom } from './GanttChart';
+import TaskMeetings from './TaskMeetings';
 import {
   buildTree,
   computeProgress,
@@ -39,6 +40,7 @@ export default function PlanningBoard({
   members,
   baselines,
   editable,
+  canWriteMeetings = false,
 }: {
   projectId: string;
   tasks: PlanTask[];
@@ -46,6 +48,7 @@ export default function PlanningBoard({
   members: Member[];
   baselines: Baseline[];
   editable: boolean;
+  canWriteMeetings?: boolean;
 }) {
   const router = useRouter();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -73,6 +76,14 @@ export default function PlanningBoard({
   const selectedProgress = selected ? progressOf.get(selected.id) ?? 0 : 0;
   const hovered = hover ? tasks.find((t) => t.id === hover.id) ?? null : null;
   const progress = rollupProgress(tasks);
+
+  const setMeetingCount = useCallback((taskId: string, count: number) => {
+    setTasks((current) =>
+      current.some((t) => t.id === taskId && (t.meetingCount ?? 0) !== count)
+        ? current.map((t) => (t.id === taskId ? { ...t, meetingCount: count } : t))
+        : current,
+    );
+  }, []);
 
   function select(id: string) {
     setSelectedId(id);
@@ -394,6 +405,11 @@ export default function PlanningBoard({
               >
                 {task.isMilestone ? <span style={{ color: progressColor(value) }}>◆</span> : null}
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{task.name}</span>
+                {task.meetingCount ? (
+                  <span className="small muted" title={`${task.meetingCount} PV de réunion`}>
+                    📋 {task.meetingCount}
+                  </span>
+                ) : null}
                 {notes ? (
                   <span className="small muted" title={`${notes} commentaire(s)`}>
                     💬 {notes}
@@ -439,6 +455,9 @@ export default function PlanningBoard({
             {formatDate(hovered.startDate)} → {formatDate(hovered.endDate)} · avancement{' '}
             <strong style={{ color: progressColor(progressOf.get(hovered.id) ?? 0) }}>{progressOf.get(hovered.id) ?? 0} %</strong>
           </div>
+          {hovered.meetingCount ? (
+            <div className="small mt-8">📋 {hovered.meetingCount} PV de réunion — détail dans le panneau de la tâche</div>
+          ) : null}
           {hovered.comments?.length ? (
             <ul className="gantt-tooltip-notes">
               {hovered.comments.map((note) => (
@@ -473,6 +492,7 @@ export default function PlanningBoard({
         </span>
         <span>◆ Jalon</span>
         <span>💬 Commentaires au survol</span>
+        <span>📋 PV de réunion</span>
       </div>
 
       {selected ? (
@@ -593,6 +613,15 @@ export default function PlanningBoard({
             <button type="button" className="btn btn-primary" onClick={postComment} disabled={busy || !comment.trim()}>
               Publier le commentaire
             </button>
+
+            <hr className="hr" />
+            <TaskMeetings
+              key={selected.id}
+              taskId={selected.id}
+              taskName={selected.name}
+              canWrite={canWriteMeetings}
+              onCountChange={setMeetingCount}
+            />
           </div>
         </div>
       ) : null}

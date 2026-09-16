@@ -11,6 +11,7 @@ export default function ProjectNav({ projectId, canManage }: { projectId: string
     { href: base, label: 'Tableau de bord', exact: true },
     { href: `${base}/tickets`, label: 'Tickets' },
     { href: `${base}/planning`, label: 'Planning / Gantt' },
+    { href: `${base}/reunions`, label: 'Réunions' },
     { href: `${base}/risques`, label: 'Risques' },
     ...(canManage ? [{ href: `${base}/equipe`, label: 'Équipe' }] : []),
   ];

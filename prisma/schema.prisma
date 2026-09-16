@@ -42,18 +42,21 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  memberships     ProjectMember[]
-  createdTickets  Ticket[]         @relation("TicketCreator")
-  assignedTickets Ticket[]         @relation("TicketAssignee")
-  comments        TicketComment[]
-  ticketEvents    TicketEvent[]
-  ownedTasks      Task[]           @relation("TaskOwner")
-  taskComments    TaskComment[]
-  notifications   Notification[]
-  auditLogs       AuditLog[]
-  risks           Risk[]           @relation("RiskOwner")
-  attachments     Attachment[]
-  handledContacts ContactMessage[] @relation("ContactHandler")
+  memberships      ProjectMember[]
+  createdTickets   Ticket[]         @relation("TicketCreator")
+  assignedTickets  Ticket[]         @relation("TicketAssignee")
+  comments         TicketComment[]
+  ticketEvents     TicketEvent[]
+  ownedTasks       Task[]           @relation("TaskOwner")
+  taskComments     TaskComment[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  risks            Risk[]           @relation("RiskOwner")
+  attachments      Attachment[]
+  handledContacts  ContactMessage[] @relation("ContactHandler")
+  meetingsWritten  MeetingMinute[]  @relation("MeetingAuthor")
+  meetingsArchived MeetingMinute[]  @relation("MeetingArchiver")
+  meetingFiles     MeetingFile[]
 
   @@index([status])
 }
@@ -75,6 +78,7 @@ model Project {
   tasks     Task[]
   risks     Risk[]
   baselines PlanBaseline[]
+  meetings  MeetingMinute[]
 }
 
 model ProjectMember {
@@ -282,6 +286,7 @@ model Task {
   successors   TaskDependency[] @relation("DepPredecessor")
   comments     TaskComment[]
   tickets      Ticket[]
+  meetings     MeetingMinute[]
 
   @@index([projectId])
 }
@@ -432,4 +437,65 @@ model ContactMessage {
   handledBy User? @relation("ContactHandler", fields: [handledById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Réunions de suivi : procès-verbaux rattachés à une tâche
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Un PV appartient au projet et vise une tâche. Si la tâche disparaît (import
+ * d'un planning en remplacement, suppression), le PV est conservé : le lien est
+ * rompu mais le nom de la tâche reste lisible grâce à `taskName`.
+ */
+model MeetingMinute {
+  id           String    @id @default(cuid())
+  projectId    String
+  taskId       String?
+  taskName     String
+  title        String
+  meetingDate  DateTime
+  location     String?
+  participants String?   @db.Text
+  agenda       String?   @db.Text
+  content      String    @db.Text
+  decisions    String?   @db.Text
+  actions      String?   @db.Text
+  nextMeeting  DateTime?
+
+  archived     Boolean   @default(false)
+  archivedAt   DateTime?
+  archivedById String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task       Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdBy  User          @relation("MeetingAuthor", fields: [createdById], references: [id])
+  archivedBy User?         @relation("MeetingArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
+  files      MeetingFile[]
+
+  @@index([projectId, archived])
+  @@index([taskId])
+}
+
+/**
+ * Pièces jointes d'un PV : PV signé, supports de présentation…
+ */
+model MeetingFile {
+  id           String   @id @default(cuid())
+  meetingId    String
+  fileName     String
+  mimeType     String
+  size         Int
+  data         String   @db.Text
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  meeting    MeetingMinute @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  uploadedBy User          @relation(fields: [uploadedById], references: [id])
+
+  @@index([meetingId])
 }
