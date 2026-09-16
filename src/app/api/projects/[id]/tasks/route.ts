@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { canEditPlanning, getProjectAccess } from '@/lib/rbac';
+import { assertAssignable, canEditPlanning, getProjectAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { audit } from '@/lib/audit';
 
@@ -46,6 +46,8 @@ export async function POST(request: Request, { params }: Params) {
       const parent = await prisma.task.findFirst({ where: { id: body.parentId, projectId: id }, select: { id: true } });
       if (!parent) return fail(400, "La tâche parente n'appartient pas au projet.");
     }
+
+    if (body.ownerId) await assertAssignable(id, String(body.ownerId));
 
     const last = await prisma.task.findFirst({
       where: { projectId: id, parentId: body.parentId || null },

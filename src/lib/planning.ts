@@ -45,6 +45,16 @@ export function durationDays(task: PlanTask) {
   return task.isMilestone ? 0 : Math.max(1, dayDiff(task.startDate, task.endDate) + 1);
 }
 
+/**
+ * Responsable affiché d'une tâche : le compte affecté, à défaut le libellé
+ * repris du planning importé (« Parcelink Team », « IT Globex »…).
+ */
+export function ownerLabelOf(task: PlanTask): { label: string; fromSource: boolean } | null {
+  if (task.ownerName) return { label: task.ownerName, fromSource: false };
+  const match = task.description?.match(/Responsable au planning source\s*:\s*(.+)/i);
+  return match ? { label: match[1].trim(), fromSource: true } : null;
+}
+
 /** Arbre WBS ordonné (phases > lots > tâches > sous-tâches). */
 export function buildTree(tasks: PlanTask[]) {
   const byParent = new Map<string | null, PlanTask[]>();

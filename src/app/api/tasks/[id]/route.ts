@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { canEditPlanning, getProjectAccess } from '@/lib/rbac';
+import { assertAssignable, canEditPlanning, getProjectAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { audit } from '@/lib/audit';
 import type { Prisma } from '@prisma/client';
@@ -33,7 +33,8 @@ export async function PATCH(request: Request, { params }: Params) {
     if (body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder);
 
     if (body.ownerId !== undefined) {
-      data.owner = body.ownerId ? { connect: { id: body.ownerId } } : { disconnect: true };
+      if (body.ownerId) await assertAssignable(task.projectId, String(body.ownerId));
+      data.owner = body.ownerId ? { connect: { id: String(body.ownerId) } } : { disconnect: true };
     }
 
     let start = task.startDate;

@@ -54,6 +54,17 @@ export async function listAccessibleProjects(user: SessionUser) {
   return memberships.map((m) => ({ project: m.project, role: m.role as EffectiveRole }));
 }
 
+/** Un responsable de tâche doit être membre du projet (ou administrateur). */
+export async function assertAssignable(projectId: string, userId: string) {
+  const member = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId } },
+    select: { id: true },
+  });
+  if (member) return;
+  const admin = await prisma.user.findFirst({ where: { id: userId, isAdmin: true }, select: { id: true } });
+  if (!admin) throw new HttpError(400, "Ce responsable n'est pas membre du projet.");
+}
+
 export function isStaff(role: EffectiveRole) {
   return role === 'ADMIN' || role === 'PROJECT_MANAGER' || role === 'TECHNICIAN';
 }

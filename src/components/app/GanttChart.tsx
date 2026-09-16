@@ -7,6 +7,7 @@ import {
   computeProgress,
   criticalPath,
   durationDays,
+  ownerLabelOf,
   type PlanDependency,
   type PlanTask,
 } from '@/lib/planning';
@@ -265,6 +266,8 @@ export default function GanttChart({
         const progress = progressOf.get(task.id) ?? 0;
         const done = progress >= 100;
         const notes = task.comments?.length ?? 0;
+        const owner = ownerLabelOf(task);
+        const ownerText = owner ? ` · ${owner.label}` : '';
         const hover = {
           onPointerEnter: (e: React.PointerEvent) => onHover?.({ id: task.id, x: e.clientX, y: e.clientY }),
           onPointerMove: (e: React.PointerEvent) => onHover?.({ id: task.id, x: e.clientX, y: e.clientY }),
@@ -291,6 +294,7 @@ export default function GanttChart({
               />
               <text x={cx + size + 6} y={cy + 4} fontSize={11} fontFamily="Archivo, system-ui, sans-serif" fill={COLORS.text}>
                 {task.name}
+                {ownerText}
                 {notes ? ` · ${notes} commentaire${notes > 1 ? 's' : ''}` : ''}
               </text>
             </g>
@@ -355,7 +359,13 @@ export default function GanttChart({
               fontWeight={hasChildren ? 800 : 400}
               fill={done ? COLORS.done : COLORS.text}
             >
-              {progress}%{notes ? ` · ${notes} commentaire${notes > 1 ? 's' : ''}` : ''}
+              {progress}%
+              {owner ? (
+                <tspan fill={COLORS.text} fontWeight={600} fontStyle={owner.fromSource ? 'italic' : 'normal'}>
+                  {ownerText}
+                </tspan>
+              ) : null}
+              {notes ? ` · ${notes} commentaire${notes > 1 ? 's' : ''}` : ''}
             </text>
           </g>
         );

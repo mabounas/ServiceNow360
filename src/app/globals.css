@@ -466,6 +466,24 @@ body {
   vertical-align: -1px;
 }
 
+/* Initiales du responsable dans la liste WBS (pointillés : libellé repris d'un import). */
+.owner-chip {
+  flex: none;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  border: 1px solid var(--color-text);
+  background: var(--color-bg);
+}
+
 /* Info-bulle d'une tâche : dates, avancement et commentaires en liste à puces. */
 .gantt-tooltip {
   position: fixed;
