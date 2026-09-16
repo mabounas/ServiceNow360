@@ -3,9 +3,19 @@
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TaskStatus } from '@prisma/client';
-import GanttChart, { type Zoom } from './GanttChart';
-import { buildTree, criticalPath, lateTasks, rollupProgress, type PlanDependency, type PlanTask } from '@/lib/planning';
-import { DEPENDENCY_TYPE_LABEL, TASK_STATUS_LABEL, formatDate } from '@/lib/labels';
+import GanttChart, { progressColor, type Zoom } from './GanttChart';
+import {
+  buildTree,
+  computeProgress,
+  criticalPath,
+  derivedStatus,
+  lateTasks,
+  rollupProgress,
+  type PlanDependency,
+  type PlanTask,
+  type TaskNote,
+} from '@/lib/planning';
+import { DEPENDENCY_TYPE_LABEL, TASK_STATUS_LABEL, formatDate, formatDateTime } from '@/lib/labels';
 
 type Member = { id: string; name: string };
 type Baseline = { id: string; label: string; snapshot: { taskId: string; startDate: string; endDate: string }[] };
@@ -51,11 +61,23 @@ export default function PlanningBoard({
   const [draft, setDraft] = useState(EMPTY_TASK);
   const [depDraft, setDepDraft] = useState({ predecessorId: '', successorId: '', lagDays: '0' });
   const [comment, setComment] = useState('');
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [sliderValue, setSliderValue] = useState(0);
 
   const rows = useMemo(() => buildTree(tasks), [tasks]);
   const critical = useMemo(() => criticalPath(tasks, dependencies), [tasks, dependencies]);
   const selected = tasks.find((t) => t.id === selectedId) ?? null;
+  const progressOf = useMemo(() => computeProgress(tasks), [tasks]);
+  const parentIds = useMemo(() => new Set(tasks.map((t) => t.parentId).filter(Boolean) as string[]), [tasks]);
+  const selectedIsParent = selected ? parentIds.has(selected.id) : false;
+  const selectedProgress = selected ? progressOf.get(selected.id) ?? 0 : 0;
+  const hovered = hover ? tasks.find((t) => t.id === hover.id) ?? null : null;
   const progress = rollupProgress(tasks);
+
+  function select(id: string) {
+    setSelectedId(id);
+    setSliderValue(tasks.find((t) => t.id === id)?.progress ?? 0);
+  }
   const late = lateTasks(tasks);
 
   const baseline = useMemo(() => {
@@ -175,8 +197,17 @@ export default function PlanningBoard({
     if (!selected || !comment.trim()) return;
     const data = await call(`/api/tasks/${selected.id}/comments`, { method: 'POST', body: JSON.stringify({ body: comment }) });
     if (!data) return;
+    const note: TaskNote = {
+      id: data.comment.id,
+      body: data.comment.body,
+      authorName: data.comment.authorName,
+      createdAt: data.comment.createdAt,
+    };
+    // L'info-bulle se met à jour sans recharger la page.
+    setTasks((current) =>
+      current.map((t) => (t.id === selected.id ? { ...t, comments: [...(t.comments ?? []), note] } : t)),
+    );
     setComment('');
-    router.refresh();
   }
 
   /** Export image : le SVG est sérialisé puis rasterisé côté navigateur. */
@@ -348,18 +379,33 @@ export default function PlanningBoard({
       <div className="gantt">
         <div className="gantt-list">
           <div className="gantt-list-head">Structure du projet (WBS)</div>
-          {rows.map(({ task, depth, hasChildren }) => (
-            <div
-              key={task.id}
-              className={`gantt-row ${hasChildren ? 'is-parent' : ''} ${selectedId === task.id ? 'is-selected' : ''}`}
-              style={{ paddingLeft: 12 + depth * 16, cursor: 'pointer' }}
-              onClick={() => setSelectedId(task.id)}
-            >
-              {task.isMilestone ? <span style={{ color: 'var(--color-accent)' }}>◆</span> : null}
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.name}</span>
-              {critical.has(task.id) && !hasChildren ? <span className="badge badge-bad">critique</span> : null}
-            </div>
-          ))}
+          {rows.map(({ task, depth, hasChildren }) => {
+            const value = progressOf.get(task.id) ?? 0;
+            const notes = task.comments?.length ?? 0;
+            return (
+              <div
+                key={task.id}
+                className={`gantt-row ${hasChildren ? 'is-parent' : ''} ${selectedId === task.id ? 'is-selected' : ''}`}
+                style={{ paddingLeft: 12 + depth * 16, cursor: 'pointer' }}
+                onClick={() => select(task.id)}
+                onMouseEnter={(e) => setHover({ id: task.id, x: e.clientX, y: e.clientY })}
+                onMouseMove={(e) => setHover({ id: task.id, x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setHover(null)}
+              >
+                {task.isMilestone ? <span style={{ color: progressColor(value) }}>◆</span> : null}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{task.name}</span>
+                {notes ? (
+                  <span className="small muted" title={`${notes} commentaire(s)`}>
+                    💬 {notes}
+                  </span>
+                ) : null}
+                {critical.has(task.id) && !hasChildren ? <span className="badge badge-bad">critique</span> : null}
+                <span className="small mono" style={{ color: progressColor(value), fontWeight: 800, minWidth: 38, textAlign: 'right' }}>
+                  {value}%
+                </span>
+              </div>
+            );
+          })}
           {rows.length === 0 ? <div className="empty">Aucune tâche planifiée.</div> : null}
         </div>
 
@@ -371,25 +417,51 @@ export default function PlanningBoard({
             zoom={zoom}
             selectedId={selectedId}
             editable={editable}
-            onSelect={setSelectedId}
+            onSelect={select}
             onMove={moveTask}
+            onHover={setHover}
             svgRef={svgRef}
           />
         </div>
       </div>
 
+      {hovered && hover ? (
+        <div
+          className="gantt-tooltip no-print"
+          style={{
+            left: Math.min(hover.x + 16, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 360),
+            top: hover.y + 16,
+          }}
+          role="tooltip"
+        >
+          <div className="gantt-tooltip-title">{hovered.name}</div>
+          <div className="small muted">
+            {formatDate(hovered.startDate)} → {formatDate(hovered.endDate)} · avancement{' '}
+            <strong style={{ color: progressColor(progressOf.get(hovered.id) ?? 0) }}>{progressOf.get(hovered.id) ?? 0} %</strong>
+          </div>
+          {hovered.comments?.length ? (
+            <ul className="gantt-tooltip-notes">
+              {hovered.comments.map((note) => (
+                <li key={note.id}>
+                  <span>{note.body}</span>
+                  <span className="muted"> — {note.authorName}, {formatDateTime(note.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="small muted mt-8">Aucun commentaire.</div>
+          )}
+        </div>
+      ) : null}
+
       <div className="gantt-legend">
         <span>
-          <span className="swatch" style={{ background: '#bab6b6' }} />À faire
+          <span className="swatch" style={{ background: '#1f9d55' }} />
+          Terminé (100 %)
         </span>
         <span>
-          <span className="swatch" style={{ background: '#ff9783' }} />En cours
-        </span>
-        <span>
-          <span className="swatch" style={{ background: '#605d5d' }} />Terminé
-        </span>
-        <span>
-          <span className="swatch" style={{ background: '#7c1405' }} />En retard
+          <span className="swatch" style={{ background: 'linear-gradient(90deg, #f28c28 50%, #fde2c6 50%)' }} />
+          En cours ou à faire (&lt; 100 %)
         </span>
         <span>
           <span className="swatch" style={{ border: '2px solid #ae1800', background: 'transparent' }} />
@@ -399,7 +471,8 @@ export default function PlanningBoard({
           <span className="swatch" style={{ background: '#bab6b6', height: 4, marginTop: 4 }} />
           Version de référence
         </span>
-        <span style={{ color: 'var(--color-accent)' }}>◆ Jalon</span>
+        <span>◆ Jalon</span>
+        <span>💬 Commentaires au survol</span>
       </div>
 
       {selected ? (
@@ -445,21 +518,33 @@ export default function PlanningBoard({
                     onChange={(e) => saveSelected({ endDate: new Date(e.target.value).toISOString() })}
                   />
                 </div>
-                <div className="field">
-                  <label htmlFor="e-progress">Avancement : {selected.progress} %</label>
-                  <input
-                    className="input"
-                    id="e-progress"
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    key={`p-${selected.id}`}
-                    defaultValue={selected.progress}
-                    onMouseUp={(e) => saveSelected({ progress: Number((e.target as HTMLInputElement).value) })}
-                    onTouchEnd={(e) => saveSelected({ progress: Number((e.target as HTMLInputElement).value) })}
-                  />
-                </div>
+                {selectedIsParent ? (
+                  <div className="field">
+                    <label>Avancement</label>
+                    <div style={{ fontWeight: 800, color: progressColor(selectedProgress) }}>{selectedProgress} %</div>
+                    <div className="field-hint">Calculé automatiquement : moyenne de ses sous-éléments.</div>
+                  </div>
+                ) : (
+                  <div className="field">
+                    <label htmlFor="e-progress">
+                      Avancement : <span style={{ color: progressColor(sliderValue) }}>{sliderValue} %</span>
+                    </label>
+                    <input
+                      className="input"
+                      id="e-progress"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      key={`p-${selected.id}`}
+                      value={sliderValue}
+                      onChange={(e) => setSliderValue(Number(e.target.value))}
+                      onMouseUp={() => saveSelected({ progress: sliderValue })}
+                      onTouchEnd={() => saveSelected({ progress: sliderValue })}
+                      onKeyUp={() => saveSelected({ progress: sliderValue })}
+                    />
+                  </div>
+                )}
                 <div className="field">
                   <label htmlFor="e-status">Statut</label>
                   <select
@@ -484,12 +569,23 @@ export default function PlanningBoard({
               </div>
             ) : (
               <div className="small muted">
-                Statut : {TASK_STATUS_LABEL[selected.status]} — avancement {selected.progress} %. Le planning est en
+                Statut : {TASK_STATUS_LABEL[derivedStatus(selected, selectedProgress, selectedIsParent)]} — avancement{' '}
+                <strong style={{ color: progressColor(selectedProgress) }}>{selectedProgress} %</strong>. Le planning est en
                 lecture seule pour votre rôle ; vous pouvez commenter cette tâche.
               </div>
             )}
 
             <hr className="hr" />
+            {selected.comments?.length ? (
+              <ul className="gantt-tooltip-notes mb-16">
+                {selected.comments.map((note) => (
+                  <li key={note.id}>
+                    <span>{note.body}</span>
+                    <span className="muted small"> — {note.authorName}, {formatDateTime(note.createdAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <div className="field">
               <label htmlFor="e-comment">Commenter cette tâche</label>
               <textarea className="input" id="e-comment" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} />

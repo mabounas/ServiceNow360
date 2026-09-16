@@ -15,6 +15,19 @@ import {
 } from '@/lib/labels';
 import { slaState, SLA_STATE_LABEL } from '@/lib/sla';
 import { buildPlanWorkbook } from '@/lib/planExport';
+import { computeProgress, derivedStatus, type PlanTask } from '@/lib/planning';
+
+/** Avancement et statut tels qu'affichés au planning : les phases sont calculées, pas lues. */
+function displayedProgress<T extends { id: string; parentId: string | null; progress: number; status: PlanTask['status']; isMilestone: boolean; sortOrder: number; name: string; startDate: Date; endDate: Date }>(tasks: T[]) {
+  const plan: PlanTask[] = tasks.map((t) => ({ ...t, startDate: t.startDate.toISOString(), endDate: t.endDate.toISOString() }));
+  const progress = computeProgress(plan);
+  const parents = new Set(tasks.map((t) => t.parentId).filter(Boolean));
+  return (t: T) => {
+    const value = progress.get(t.id) ?? t.progress;
+    const planTask = plan.find((x) => x.id === t.id)!;
+    return { progress: value, status: derivedStatus(planTask, value, parents.has(t.id)) };
+  };
+}
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -91,6 +104,7 @@ export async function GET(request: Request, { params }: Params) {
         }),
       ]);
       if (!full) return fail(404, 'Projet introuvable.');
+      const shown = displayedProgress(tasks);
 
       const workbook = await buildPlanWorkbook(
         full,
@@ -102,8 +116,7 @@ export async function GET(request: Request, { params }: Params) {
           ownerName: t.owner ? fullName(t.owner) : null,
           startDate: t.startDate,
           endDate: t.endDate,
-          progress: t.progress,
-          status: t.status,
+          ...shown(t),
           isMilestone: t.isMilestone,
           sortOrder: t.sortOrder,
         })),
@@ -124,6 +137,7 @@ export async function GET(request: Request, { params }: Params) {
         orderBy: [{ sortOrder: 'asc' }],
       });
 
+      const shown = displayedProgress(tasks);
       const rows = tasks.map((t) => ({
         nom: t.name,
         parent: t.parent?.name ?? '',
@@ -131,8 +145,8 @@ export async function GET(request: Request, { params }: Params) {
         responsable: t.owner ? fullName(t.owner) : '',
         debut: formatDate(t.startDate),
         fin: formatDate(t.endDate),
-        avancement: `${t.progress} %`,
-        statut: TASK_STATUS_LABEL[t.status],
+        avancement: `${shown(t).progress} %`,
+        statut: TASK_STATUS_LABEL[shown(t).status],
       }));
 
       return csvResponse(

@@ -21,7 +21,8 @@ export async function POST(request: Request, { params }: Params) {
     const text = String(body.body ?? '').trim();
     if (!text) return fail(400, 'Le commentaire est vide.');
 
-    const comment = await prisma.taskComment.create({ data: { taskId: id, authorId: user.id, body: text } });
+    const created = await prisma.taskComment.create({ data: { taskId: id, authorId: user.id, body: text } });
+    const comment = { ...created, authorName: fullName(user) };
 
     const managers = await prisma.projectMember.findMany({
       where: { projectId: task.projectId, role: { in: ['PROJECT_MANAGER', 'SUPERVISOR'] } },

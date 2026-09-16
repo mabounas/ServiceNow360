@@ -13,6 +13,15 @@ export type PlanTask = {
   ownerName?: string | null;
   ownerId?: string | null;
   description?: string | null;
+  comments?: TaskNote[];
+};
+
+/** Commentaire laissé sur une tâche, affiché en info-bulle sur le planning. */
+export type TaskNote = {
+  id: string;
+  body: string;
+  authorName: string;
+  createdAt: string;
 };
 
 export type PlanDependency = {
@@ -59,13 +68,56 @@ export function buildTree(tasks: PlanTask[]) {
   return flat;
 }
 
-/** Avancement consolidé d'un ensemble de tâches, pondéré par la durée. */
+/**
+ * Avancement de chaque tâche du planning.
+ *
+ * Une tâche sans enfant garde l'avancement saisi. Une tâche parente (phase,
+ * lot) prend la moyenne simple de ses sous-éléments directs, jalons compris,
+ * calculée récursivement : une phase de 6 éléments dont 3 à 100 %, 1 à 5 % et
+ * 2 à 0 % est à (3 × 100 + 5) / 6 ≈ 51 %. Aucune pondération par la durée,
+ * et la valeur éventuellement stockée sur la phase est ignorée.
+ */
+export function computeProgress(tasks: PlanTask[]): Map<string, number> {
+  const children = new Map<string, PlanTask[]>();
+  for (const t of tasks) {
+    if (!t.parentId) continue;
+    children.set(t.parentId, [...(children.get(t.parentId) ?? []), t]);
+  }
+
+  const result = new Map<string, number>();
+  const visit = (task: PlanTask, guard: Set<string>): number => {
+    const cached = result.get(task.id);
+    if (cached !== undefined) return cached;
+    const kids = children.get(task.id) ?? [];
+    let value: number;
+    if (!kids.length || guard.has(task.id)) {
+      value = Math.min(100, Math.max(0, task.progress));
+    } else {
+      guard.add(task.id);
+      value = Math.round(kids.reduce((sum, k) => sum + visit(k, guard), 0) / kids.length);
+    }
+    result.set(task.id, value);
+    return value;
+  };
+  for (const t of tasks) visit(t, new Set());
+  return result;
+}
+
+/** Avancement global : moyenne simple des éléments de premier niveau. */
 export function rollupProgress(tasks: PlanTask[]) {
-  const leaves = tasks.filter((t) => !tasks.some((other) => other.parentId === t.id));
-  const total = leaves.reduce((sum, t) => sum + Math.max(durationDays(t), 1), 0);
-  if (total === 0) return 0;
-  const done = leaves.reduce((sum, t) => sum + Math.max(durationDays(t), 1) * (t.progress / 100), 0);
-  return Math.round((done / total) * 100);
+  const ids = new Set(tasks.map((t) => t.id));
+  // Racines de l'ensemble fourni (un sous-arbre passé seul a sa phase pour racine).
+  const roots = tasks.filter((t) => !t.parentId || !ids.has(t.parentId));
+  if (!roots.length) return 0;
+  const progress = computeProgress(tasks);
+  return Math.round(roots.reduce((sum, t) => sum + (progress.get(t.id) ?? 0), 0) / roots.length);
+}
+
+/** Statut affiché d'une tâche parente, déduit de son avancement calculé. */
+export function derivedStatus(task: PlanTask, progress: number, hasChildren: boolean): TaskStatus {
+  if (!hasChildren) return task.status;
+  if (progress >= 100) return 'DONE';
+  return progress > 0 ? 'IN_PROGRESS' : 'TODO';
 }
 
 /**
@@ -144,9 +196,14 @@ export function criticalPath(tasks: PlanTask[], deps: PlanDependency[]): Set<str
   return critical;
 }
 
-/** Tâches en retard : échéance dépassée sans être terminées. */
+/** Tâches en retard : échéance dépassée sans être terminées (hors phases, dont le retard vient des enfants). */
 export function lateTasks(tasks: PlanTask[], now = new Date()) {
+  const parents = new Set(tasks.map((t) => t.parentId).filter(Boolean));
   return tasks.filter(
-    (t) => t.progress < 100 && t.status !== 'DONE' && new Date(t.endDate).getTime() < now.getTime(),
+    (t) =>
+      !parents.has(t.id) &&
+      t.progress < 100 &&
+      t.status !== 'DONE' &&
+      new Date(t.endDate).getTime() < now.getTime(),
   );
 }

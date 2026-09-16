@@ -30,6 +30,8 @@ const ACCENT = 'FFEC3013';
 const INK = 'FF201E1D';
 const SURFACE = 'FFEAE9E9';
 const LIGHT = 'FFF3F2F2';
+const DONE = 'FF1F9D55';
+const TODO = 'FFF28C28';
 
 /** Lundi de la semaine contenant la date. */
 function mondayOf(date: Date) {
@@ -149,7 +151,7 @@ export async function buildPlanWorkbook(
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: task.isMilestone ? INK : isPhase ? INK : ACCENT },
+          fgColor: { argb: task.progress >= 100 ? DONE : TODO },
         };
       } else {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: LIGHT } };

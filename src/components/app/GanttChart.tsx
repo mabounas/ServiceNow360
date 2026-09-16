@@ -1,8 +1,15 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import type { TaskStatus } from '@prisma/client';
-import { DAY_MS, buildTree, criticalPath, durationDays, type PlanDependency, type PlanTask } from '@/lib/planning';
+import {
+  DAY_MS,
+  buildTree,
+  computeProgress,
+  criticalPath,
+  durationDays,
+  type PlanDependency,
+  type PlanTask,
+} from '@/lib/planning';
 
 export type Zoom = 'day' | 'week' | 'month';
 
@@ -20,15 +27,16 @@ const COLORS = {
   accentDark: '#ae1800',
   today: '#ec3013',
   baseline: '#bab6b6',
+  // Avancement : vert une fois terminé, orange tant qu'il reste du travail.
+  done: '#1f9d55',
+  todo: '#f28c28',
+  todoTrack: '#fde2c6',
 };
 
-const STATUS_FILL: Record<TaskStatus, string> = {
-  TODO: '#bab6b6',
-  IN_PROGRESS: '#ff9783',
-  DONE: '#605d5d',
-  LATE: '#7c1405',
-  BLOCKED: '#7d7979',
-};
+/** Couleur d'un élément selon son avancement (100 % → vert, sinon orange). */
+export function progressColor(progress: number) {
+  return progress >= 100 ? COLORS.done : COLORS.todo;
+}
 
 const PX_PER_DAY: Record<Zoom, number> = { day: 34, week: 11, month: 3.6 };
 const ROW_H = 34;
@@ -57,6 +65,7 @@ export default function GanttChart({
   editable,
   onSelect,
   onMove,
+  onHover,
   svgRef,
 }: {
   tasks: PlanTask[];
@@ -67,10 +76,13 @@ export default function GanttChart({
   editable: boolean;
   onSelect: (id: string) => void;
   onMove: (id: string, startDate: string, endDate: string) => void;
+  /** Survol d'une barre : coordonnées écran pour positionner l'info-bulle, `null` à la sortie. */
+  onHover?: (hover: { id: string; x: number; y: number } | null) => void;
   svgRef?: React.RefObject<SVGSVGElement | null>;
 }) {
   const rows = useMemo(() => buildTree(tasks), [tasks]);
   const critical = useMemo(() => criticalPath(tasks, dependencies), [tasks, dependencies]);
+  const progressOf = useMemo(() => computeProgress(tasks), [tasks]);
   const [drag, setDrag] = useState<{ id: string; mode: 'move' | 'resize'; startX: number; deltaDays: number } | null>(null);
   const localRef = useRef<SVGSVGElement | null>(null);
   const ref = svgRef ?? localRef;
@@ -250,28 +262,46 @@ export default function GanttChart({
         const x = xOf(task.startDate) + offsetStart;
         const barWidth = Math.max(pxPerDay * 0.6, durationDays(task) * pxPerDay + offsetEnd - offsetStart);
         const base = baseline?.[task.id];
+        const progress = progressOf.get(task.id) ?? 0;
+        const done = progress >= 100;
+        const notes = task.comments?.length ?? 0;
+        const hover = {
+          onPointerEnter: (e: React.PointerEvent) => onHover?.({ id: task.id, x: e.clientX, y: e.clientY }),
+          onPointerMove: (e: React.PointerEvent) => onHover?.({ id: task.id, x: e.clientX, y: e.clientY }),
+          onPointerLeave: () => onHover?.(null),
+        };
 
         if (task.isMilestone) {
           const cx = x;
           const cy = y + ROW_H / 2;
           const size = 8;
           return (
-            <g key={task.id} onPointerDown={(e) => onPointerDown(e, task, 'move')} onClick={() => onSelect(task.id)} style={{ cursor: editable ? 'grab' : 'pointer' }}>
+            <g
+              key={task.id}
+              {...hover}
+              onPointerDown={(e) => onPointerDown(e, task, 'move')}
+              onClick={() => onSelect(task.id)}
+              style={{ cursor: editable ? 'grab' : 'pointer' }}
+            >
               <polygon
                 points={`${cx},${cy - size} ${cx + size},${cy} ${cx},${cy + size} ${cx - size},${cy}`}
-                fill={task.progress >= 100 ? COLORS.text : COLORS.accent}
+                fill={progressColor(progress)}
                 stroke={selectedId === task.id ? COLORS.accentDark : 'none'}
                 strokeWidth={2}
               />
               <text x={cx + size + 6} y={cy + 4} fontSize={11} fontFamily="Archivo, system-ui, sans-serif" fill={COLORS.text}>
                 {task.name}
+                {notes ? ` · ${notes} commentaire${notes > 1 ? 's' : ''}` : ''}
               </text>
             </g>
           );
         }
 
+        const barY = y + (hasChildren ? 11 : 8);
+        const barH = hasChildren ? 12 : 16;
+
         return (
-          <g key={task.id} onClick={() => onSelect(task.id)}>
+          <g key={task.id} {...hover} onClick={() => onSelect(task.id)}>
             {base ? (
               <rect
                 x={xOf(base.startDate)}
@@ -282,20 +312,27 @@ export default function GanttChart({
               />
             ) : null}
 
+            {/* Piste : verte si terminé, orange pâle sinon, remplie en orange au prorata. */}
             <rect
               x={x}
-              y={y + 8}
+              y={barY}
               width={barWidth}
-              height={hasChildren ? 10 : 16}
-              fill={hasChildren ? COLORS.text : STATUS_FILL[task.status]}
-              stroke={isCritical ? COLORS.accentDark : selectedId === task.id ? COLORS.accent : 'none'}
+              height={barH}
+              fill={done ? COLORS.done : COLORS.todoTrack}
+              stroke={isCritical ? COLORS.accentDark : selectedId === task.id ? COLORS.text : 'none'}
               strokeWidth={2}
-              onPointerDown={(e) => onPointerDown(e, task, 'move')}
-              style={{ cursor: editable ? 'grab' : 'pointer' }}
+              onPointerDown={hasChildren ? undefined : (e) => onPointerDown(e, task, 'move')}
+              style={{ cursor: editable && !hasChildren ? 'grab' : 'pointer' }}
             />
-
-            {!hasChildren && task.progress > 0 ? (
-              <rect x={x} y={y + 8} width={(barWidth * Math.min(task.progress, 100)) / 100} height={16} fill={COLORS.accent} opacity={0.85} />
+            {!done && progress > 0 ? (
+              <rect
+                x={x}
+                y={barY}
+                width={(barWidth * progress) / 100}
+                height={barH}
+                fill={COLORS.todo}
+                pointerEvents="none"
+              />
             ) : null}
 
             {editable && !hasChildren ? (
@@ -310,8 +347,15 @@ export default function GanttChart({
               />
             ) : null}
 
-            <text x={x + barWidth + 6} y={y + 21} fontSize={11} fontFamily="Archivo, system-ui, sans-serif" fill={COLORS.text} opacity={0.85}>
-              {task.progress}%
+            <text
+              x={x + barWidth + 6}
+              y={y + 21}
+              fontSize={11}
+              fontFamily="Archivo, system-ui, sans-serif"
+              fontWeight={hasChildren ? 800 : 400}
+              fill={done ? COLORS.done : COLORS.text}
+            >
+              {progress}%{notes ? ` · ${notes} commentaire${notes > 1 ? 's' : ''}` : ''}
             </text>
           </g>
         );

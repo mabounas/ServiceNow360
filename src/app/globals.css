@@ -466,6 +466,46 @@ body {
   vertical-align: -1px;
 }
 
+/* Info-bulle d'une tâche : dates, avancement et commentaires en liste à puces. */
+.gantt-tooltip {
+  position: fixed;
+  z-index: 60;
+  width: 340px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px 14px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-text);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  font-size: 13px;
+}
+
+.gantt-tooltip-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.gantt-tooltip-notes {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gantt-tooltip-notes li {
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.gantt-tooltip-notes li::marker {
+  color: var(--color-accent);
+}
+
 /* — tableau kanban / pipeline — */
 .pipeline {
   display: grid;

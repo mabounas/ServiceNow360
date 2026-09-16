@@ -15,7 +15,13 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
   const [tasks, dependencies, members, baselines] = await Promise.all([
     prisma.task.findMany({
       where: { projectId: id },
-      include: { owner: { select: { id: true, firstName: true, lastName: true } } },
+      include: {
+        owner: { select: { id: true, firstName: true, lastName: true } },
+        comments: {
+          include: { author: { select: { firstName: true, lastName: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
       orderBy: [{ sortOrder: 'asc' }, { startDate: 'asc' }],
     }),
     prisma.taskDependency.findMany({ where: { predecessor: { projectId: id } } }),
@@ -39,6 +45,12 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
     ownerId: t.ownerId,
     ownerName: t.owner ? fullName(t.owner) : null,
     description: t.description,
+    comments: t.comments.map((c) => ({
+      id: c.id,
+      body: c.body,
+      authorName: fullName(c.author),
+      createdAt: c.createdAt.toISOString(),
+    })),
   }));
 
   return (
