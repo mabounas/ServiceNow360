@@ -80,6 +80,17 @@ export default function PlanningBoard({
   const selectedIsParent = selected ? parentIds.has(selected.id) : false;
   const selectedProgress = selected ? progressOf.get(selected.id) ?? 0 : 0;
   // Position de la tâche sélectionnée parmi les éléments de même niveau (ordre affiché).
+  const siblingPos = useMemo(() => {
+    const count = new Map<string | null, number>();
+    const pos = new Map<string, { index: number; parentId: string | null }>();
+    for (const r of rows) {
+      const key = r.task.parentId ?? null;
+      const index = count.get(key) ?? 0;
+      pos.set(r.task.id, { index, parentId: key });
+      count.set(key, index + 1);
+    }
+    return { pos, count };
+  }, [rows]);
   const selectedSiblings = selected ? rows.filter((r) => (r.task.parentId ?? null) === (selected.parentId ?? null)) : [];
   const selectedIndex = selected ? selectedSiblings.findIndex((r) => r.task.id === selected.id) : -1;
   // Phases possibles : tout élément non jalon qui n'est ni la tâche ni l'une de ses sous-tâches.
@@ -179,9 +190,9 @@ export default function PlanningBoard({
     router.refresh();
   }
 
-  async function reorder(body: { direction?: 'up' | 'down'; parentId?: string | null }) {
-    if (!selected) return;
-    const data = await call(`/api/tasks/${selected.id}/move`, { method: 'POST', body: JSON.stringify(body) });
+  async function reorder(body: { direction?: 'up' | 'down'; parentId?: string | null }, taskId = selected?.id) {
+    if (!taskId) return;
+    const data = await call(`/api/tasks/${taskId}/move`, { method: 'POST', body: JSON.stringify(body) });
     if (!data) return;
     const next = new Map<string, { parentId: string | null; sortOrder: number }>(
       data.tasks.map((u: { id: string; parentId: string | null; sortOrder: number }) => [u.id, u]),
@@ -190,7 +201,7 @@ export default function PlanningBoard({
       current.map((t) => {
         const u = next.get(t.id);
         if (!u) return t;
-        return t.id === selected.id ? { ...t, parentId: u.parentId, sortOrder: u.sortOrder } : { ...t, sortOrder: u.sortOrder };
+        return t.id === taskId ? { ...t, parentId: u.parentId, sortOrder: u.sortOrder } : { ...t, sortOrder: u.sortOrder };
       }),
     );
     router.refresh();
@@ -505,6 +516,35 @@ export default function PlanningBoard({
                   </span>
                 ) : null}
                 {critical.has(task.id) && !hasChildren ? <span className="badge badge-bad">critique</span> : null}
+                {editable
+                  ? (() => {
+                      const p = siblingPos.pos.get(task.id);
+                      const total = siblingPos.count.get(p?.parentId ?? null) ?? 0;
+                      if (!p || total < 2) return null;
+                      return (
+                        <span className="row-move no-print" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            aria-label={`Monter « ${task.name} »`}
+                            title="Monter"
+                            disabled={busy || p.index === 0}
+                            onClick={() => reorder({ direction: 'up' }, task.id)}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Descendre « ${task.name} »`}
+                            title="Descendre"
+                            disabled={busy || p.index === total - 1}
+                            onClick={() => reorder({ direction: 'down' }, task.id)}
+                          >
+                            ▼
+                          </button>
+                        </span>
+                      );
+                    })()
+                  : null}
                 <span className="small mono" style={{ color: progressColor(value), fontWeight: 800, minWidth: 38, textAlign: 'right' }}>
                   {value}%
                 </span>

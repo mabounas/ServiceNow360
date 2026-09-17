@@ -702,3 +702,14 @@ body {
   .gantt { grid-template-columns: minmax(0, 1fr); }
   .gantt-list { border-right: 0; border-bottom: 2px solid var(--color-divider); }
 }
+
+/* Réordonner une ligne du planning (visible au survol, toujours au clavier) */
+.row-move { display: inline-flex; flex-direction: column; gap: 1px; opacity: 0; transition: opacity 0.12s; }
+.gantt-row:hover .row-move, .gantt-row.is-selected .row-move, .row-move:focus-within { opacity: 1; }
+.row-move button {
+  border: 1px solid var(--color-neutral-400); background: #fff; color: var(--color-text);
+  font-size: 8px; line-height: 1; width: 20px; height: 13px; padding: 0; cursor: pointer;
+}
+.row-move button:hover:not(:disabled) { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+.row-move button:disabled { opacity: 0.3; cursor: default; }
+@media (hover: none) { .row-move { opacity: 1; } }
