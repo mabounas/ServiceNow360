@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
-import { canContribute, canEditTicketContent, isStaff, requireTicketAccess } from '@/lib/rbac';
+import { canAssignTicket, canContribute, canEditTicketContent, isStaff, requireTicketAccess } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import {
+  CLOSED_STATUSES,
   ENVIRONMENTS,
   PRIORITY_LABEL,
   SEVERITY_LABEL,
@@ -16,6 +17,7 @@ import { SLA_STATE_LABEL, SLA_STATE_TONE, slaState } from '@/lib/sla';
 import { availableTransitions, workflowSteps } from '@/lib/workflow';
 import TicketActions from '@/components/app/TicketActions';
 import TicketQualification from '@/components/app/TicketQualification';
+import TicketAssign from '@/components/app/TicketAssign';
 import CommentForm from '@/components/app/CommentForm';
 import SatisfactionForm from '@/components/app/SatisfactionForm';
 import TicketDelete from '@/components/app/TicketDelete';
@@ -259,11 +261,22 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
                 transitions={transitions.map((t) => ({ to: t.to, label: t.label, requiresNote: t.requiresNote }))}
                 members={memberOptions}
                 needsEstimate={ticket.type !== 'INCIDENT'}
-                canAssign={staff}
+                canAssign={canAssignTicket(role)}
                 currentAssigneeId={ticket.assigneeId}
               />
             </div>
           </div>
+
+          {!staff && canAssignTicket(role) && !CLOSED_STATUSES.includes(ticket.status) ? (
+            <div className="panel">
+              <div className="panel-head">
+                <h3 className="panel-title">Affectation</h3>
+              </div>
+              <div className="panel-body">
+                <TicketAssign ticketId={ticket.id} currentAssigneeId={ticket.assigneeId} members={memberOptions} />
+              </div>
+            </div>
+          ) : null}
 
           {staff ? (
             <div className="panel">

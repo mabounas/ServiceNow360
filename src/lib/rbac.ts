@@ -83,6 +83,11 @@ export async function assertTicketAssignable(projectId: string, userId: string) 
   throw new HttpError(400, "Ce destinataire ne peut pas recevoir de ticket sur ce projet.");
 }
 
+/** Affecter un ticket : l'équipe projet et le superviseur. */
+export function canAssignTicket(role: EffectiveRole) {
+  return isStaff(role) || role === 'SUPERVISOR';
+}
+
 export function isStaff(role: EffectiveRole) {
   return role === 'ADMIN' || role === 'PROJECT_MANAGER' || role === 'TECHNICIAN';
 }

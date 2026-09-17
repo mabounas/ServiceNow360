@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { assertTicketAssignable, canEditTicketContent, isStaff, requireTicketAccess } from '@/lib/rbac';
+import { assertTicketAssignable, canAssignTicket, canEditTicketContent, isStaff, requireTicketAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { computeSlaDueDates } from '@/lib/sla';
 import { audit } from '@/lib/audit';
@@ -118,8 +118,13 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     // ── Qualification ──
-    const triage = ['priority', 'severity', 'estimateDays', 'estimateCost', 'assigneeId', 'taskId'].some((k) => body[k] !== undefined);
+    const triage = ['priority', 'severity', 'estimateDays', 'estimateCost', 'taskId'].some((k) => body[k] !== undefined);
     if (triage && !staff) return fail(403, 'Seule l’équipe projet peut modifier la qualification du ticket.');
+    // Affectation : équipe projet et superviseur, jamais sur un ticket terminé.
+    if (body.assigneeId !== undefined && (body.assigneeId || null) !== ticket.assigneeId) {
+      if (!canAssignTicket(role)) return fail(403, 'Vous ne pouvez pas affecter ce ticket.');
+      if (ticket.status === 'CLOSED') return fail(409, 'Un ticket clôturé ne peut plus être réaffecté.');
+    }
 
     if (body.priority && body.priority !== ticket.priority) {
       data.priority = body.priority;
