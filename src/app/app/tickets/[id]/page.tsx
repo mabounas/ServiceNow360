@@ -61,7 +61,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const state = slaState(ticket);
 
   const memberOptions = members.map((m) => ({ id: m.user.id, name: fullName(m.user) }));
-  const canEdit = canEditTicketContent(role, ctx.isCreator, ticket.status);
+  const canEdit = canEditTicketContent(role, ctx, ticket.status);
   const canComment = canContribute(role);
 
   return (

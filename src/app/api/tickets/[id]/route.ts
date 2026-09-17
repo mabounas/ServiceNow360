@@ -90,7 +90,7 @@ export async function PATCH(request: Request, { params }: Params) {
     const body = await request.json();
 
     const staff = isStaff(role);
-    const contentAllowed = canEditTicketContent(role, ctx.isCreator, ticket.status);
+    const contentAllowed = canEditTicketContent(role, ctx, ticket.status);
     const data: Prisma.TicketUpdateInput = {};
     const events: { field: string; fromValue: string | null; toValue: string | null; note?: string }[] = [];
 

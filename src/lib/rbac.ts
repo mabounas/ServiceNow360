@@ -64,9 +64,14 @@ export function canContribute(role: EffectiveRole) {
  * formulaire) : tant qu'il n'est pas clôturé, par son créateur, le superviseur,
  * le chef de projet ou l'administrateur. La qualification reste à l'équipe.
  */
-export function canEditTicketContent(role: EffectiveRole, isCreator: boolean, status: string) {
+export function canEditTicketContent(
+  role: EffectiveRole,
+  who: { isCreator: boolean; isAssignee: boolean },
+  status: string,
+) {
   if (status === 'CLOSED' || role === 'VIEWER') return false;
-  return isCreator || role === 'ADMIN' || role === 'PROJECT_MANAGER' || role === 'SUPERVISOR';
+  // Déclarant, personne affectée (qui complète les informations) et gouvernance.
+  return who.isCreator || who.isAssignee || role === 'ADMIN' || role === 'PROJECT_MANAGER' || role === 'SUPERVISOR';
 }
 
 /** Un ticket ne peut être assigné qu'à un membre actif du projet qui n'est pas observateur. */

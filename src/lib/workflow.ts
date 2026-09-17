@@ -19,6 +19,8 @@ export type Transition = {
 
 const STAFF: Actor[] = ['ADMIN', 'PROJECT_MANAGER', 'TECHNICIAN'];
 const GOVERNANCE: Actor[] = ['ADMIN', 'PROJECT_MANAGER', 'SUPERVISOR'];
+/** La clôture d'un ticket appartient à la personne qui l'a déclaré. */
+const CLOSER: Actor[] = ['CREATOR'];
 
 /** §3.2.1 — cycle de vie des incidents (traitement correctif piloté par SLA). */
 const INCIDENT_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
@@ -44,11 +46,11 @@ const INCIDENT_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
     { to: 'IN_PROGRESS', label: 'Répondre et relancer le traitement', by: [...STAFF, 'ASSIGNEE', 'CREATOR'] },
   ],
   RESOLVED: [
-    { to: 'CLOSED', label: 'Valider la résolution et clôturer', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER', 'SUPERVISOR'] },
+    { to: 'CLOSED', label: 'Valider la résolution et clôturer', by: CLOSER },
     { to: 'IN_PROGRESS', label: 'Rouvrir — la résolution ne convient pas', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER'], requiresNote: true },
   ],
   REJECTED: [
-    { to: 'CLOSED', label: 'Prendre acte et clôturer', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER'] },
+    { to: 'CLOSED', label: 'Prendre acte et clôturer', by: CLOSER },
     { to: 'IN_QUALIFICATION', label: 'Contester — remettre en qualification', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER'], requiresNote: true },
   ],
 };
@@ -62,7 +64,7 @@ function decisions(): Transition[] {
     { to: 'ACCEPTED_PLANNED', label: 'Accepter la demande', by: GOVERNANCE },
     { to: 'POSTPONED', label: 'Reporter à une phase ultérieure', by: GOVERNANCE, requiresNote: true },
     { to: 'REFUSED', label: 'Rejeter la demande', by: GOVERNANCE, requiresNote: true },
-    { to: 'CLOSED', label: 'Clôturer sans suite', by: GOVERNANCE, requiresNote: true },
+    { to: 'CLOSED', label: 'Clôturer sans suite (déclarant)', by: CLOSER, requiresNote: true },
   ];
 }
 
@@ -80,15 +82,15 @@ const CHANGE_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
     { to: 'DELIVERED', label: 'Livrer', by: [...STAFF, 'ASSIGNEE'] },
   ],
   DELIVERED: [
-    { to: 'CLOSED', label: 'Valider la livraison et clôturer', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER', 'SUPERVISOR'] },
+    { to: 'CLOSED', label: 'Valider la livraison et clôturer', by: CLOSER },
     { to: 'IN_DEVELOPMENT', label: 'Rouvrir — la livraison ne convient pas', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER'], requiresNote: true },
   ],
   POSTPONED: [
     { to: 'PENDING_ARBITRATION', label: "Remettre à l'arbitrage", by: GOVERNANCE },
-    { to: 'CLOSED', label: 'Clôturer sans suite', by: GOVERNANCE, requiresNote: true },
+    { to: 'CLOSED', label: 'Clôturer sans suite', by: CLOSER, requiresNote: true },
   ],
   REFUSED: [
-    { to: 'CLOSED', label: 'Prendre acte et clôturer', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER', 'SUPERVISOR'] },
+    { to: 'CLOSED', label: 'Prendre acte et clôturer', by: CLOSER },
   ],
 };
 
