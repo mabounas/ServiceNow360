@@ -315,7 +315,7 @@ export default function LandingPage() {
                       />
                       <span>{t.login.remember}</span>
                     </label>
-                    <a href="#acces" style={{ fontSize: 13 }}>{t.login.forgot}</a>
+                    <a href="/mot-de-passe-oublie" style={{ fontSize: 13 }}>{t.login.forgot}</a>
                   </div>
 
                   <button

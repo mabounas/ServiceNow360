@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { appUrl, sendMail } from './mail';
 
 /**
  * Module 5 — notifications.
@@ -14,34 +15,13 @@ export type NotifyInput = {
   link?: string;
 };
 
-function smtpConfigured() {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
-}
-
 async function sendEmails(recipients: { email: string }[], input: NotifyInput) {
-  if (!smtpConfigured() || recipients.length === 0) return false;
-  try {
-    // nodemailer est chargé dynamiquement : le portail fonctionne sans dépendance e-mail.
-    const mod = await import('nodemailer').catch(() => null);
-    if (!mod) return false;
-    const transport = mod.default.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: Number(process.env.SMTP_PORT ?? 587) === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-    });
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? '';
-    await transport.sendMail({
-      from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
-      bcc: recipients.map((r) => r.email),
-      subject: input.title,
-      text: input.link ? `${input.body}\n\n${base}${input.link}` : input.body,
-    });
-    return true;
-  } catch (error) {
-    console.error('Envoi e-mail impossible', error);
-    return false;
-  }
+  if (recipients.length === 0) return false;
+  return sendMail({
+    bcc: recipients.map((r) => r.email),
+    subject: input.title,
+    text: input.link ? `${input.body}\n\n${appUrl()}${input.link}` : input.body,
+  });
 }
 
 export async function notify(input: NotifyInput) {

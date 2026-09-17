@@ -36,9 +36,13 @@ export default async function AdminUsersPage() {
         users={users.map((u) => ({
           id: u.id,
           name: fullName(u),
+          firstName: u.firstName,
+          lastName: u.lastName,
           email: u.email,
           company: u.company,
           jobRole: u.jobRole,
+          phone: u.phone,
+          country: u.country,
           status: u.status,
           isAdmin: u.isAdmin,
           createdAt: u.createdAt.toISOString(),

@@ -76,10 +76,14 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         company: true,
         isAdmin: true,
         status: true,
+        passwordChangedAt: true,
       },
     });
     if (!user || user.status === 'DISABLED') return null;
-    return user;
+    // Session ouverte avant le dernier changement de mot de passe : invalide.
+    const { passwordChangedAt, ...sessionUser } = user;
+    if (passwordChangedAt && (payload.iat ?? 0) * 1000 < passwordChangedAt.getTime() - 1000) return null;
+    return sessionUser;
   } catch {
     return null;
   }

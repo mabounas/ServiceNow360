@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AccountStatus, ProjectRole } from '@prisma/client';
 import { ACCOUNT_STATUS_LABEL, PROJECT_ROLE_LABEL, formatDate } from '@/lib/labels';
@@ -9,14 +9,32 @@ import { ACCOUNT_STATUS_LABEL, PROJECT_ROLE_LABEL, formatDate } from '@/lib/labe
 export type UserRow = {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   company: string;
   jobRole: string | null;
+  phone: string | null;
+  country: string | null;
   status: AccountStatus;
   isAdmin: boolean;
   createdAt: string;
   memberships: { projectId: string; projectName: string; role: ProjectRole }[];
 };
+
+type Profile = { firstName: string; lastName: string; email: string; company: string; jobRole: string; phone: string; country: string };
+
+const PROFILE_INPUTS: { key: keyof Profile; label: string; type?: string; required?: boolean }[] = [
+  { key: 'firstName', label: 'Prénom', required: true },
+  { key: 'lastName', label: 'Nom', required: true },
+  { key: 'email', label: 'Adresse e-mail (identifiant de connexion)', type: 'email', required: true },
+  { key: 'company', label: 'Société', required: true },
+  { key: 'jobRole', label: 'Fonction' },
+  { key: 'phone', label: 'Téléphone', type: 'tel' },
+  { key: 'country', label: 'Pays' },
+];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
 
 export type ProjectOption = { id: string; name: string; code: string };
 
@@ -40,6 +58,101 @@ export default function AdminUsers({
   const [notice, setNotice] = useState<Record<string, { tone: 'ok' | 'error' | 'info'; text: string }>>({});
   const say = (userId: string, tone: 'ok' | 'error' | 'info', text: string) =>
     setNotice((current) => ({ ...current, [userId]: { tone, text } }));
+
+  // Fiche en cours de modification (une seule à la fois) et lien de réinitialisation à transmettre.
+  const [editing, setEditing] = useState<{ userId: string; form: Profile } | null>(null);
+  const [editError, setEditError] = useState('');
+  const [resetLink, setResetLink] = useState<Record<string, string>>({});
+
+  const startEdit = (u: UserRow) => {
+    setEditError('');
+    setEditing({
+      userId: u.id,
+      form: {
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        company: u.company,
+        jobRole: u.jobRole ?? '',
+        phone: u.phone ?? '',
+        country: u.country ?? '',
+      },
+    });
+  };
+
+  async function saveProfile(u: UserRow) {
+    if (!editing) return;
+    const { form } = editing;
+    setEditError('');
+    if (!form.firstName.trim() || !form.lastName.trim() || !form.company.trim()) {
+      setEditError('Prénom, nom et société sont obligatoires.');
+      return;
+    }
+    if (!EMAIL_RE.test(form.email.trim())) {
+      setEditError('Adresse e-mail invalide.');
+      return;
+    }
+    const emailChanged = form.email.trim().toLowerCase() !== u.email;
+    if (
+      emailChanged &&
+      !window.confirm(
+        `Changer l’adresse de connexion de ${u.name} en « ${form.email.trim()} » ?\nL’utilisateur devra désormais se connecter avec cette adresse.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: u.id, ...form }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error ?? 'Enregistrement impossible.');
+        return;
+      }
+      setUsers((current) =>
+        current.map((x) => (x.id === u.id ? { ...x, ...data.user, name: `${data.user.firstName} ${data.user.lastName}` } : x)),
+      );
+      setEditing(null);
+      say(u.id, 'ok', emailChanged ? `Profil enregistré. Nouvelle adresse de connexion : ${data.user.email}.` : 'Profil enregistré.');
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendResetLink(u: UserRow) {
+    if (!window.confirm(`Envoyer à ${u.name} un lien pour choisir un nouveau mot de passe ?`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/users/reset-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: u.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        say(u.id, 'error', data.error ?? 'Envoi impossible.');
+        return;
+      }
+      if (data.sent) {
+        setResetLink((current) => {
+          const next = { ...current };
+          delete next[u.id];
+          return next;
+        });
+        say(u.id, 'ok', `Lien de réinitialisation envoyé à ${data.email} (valable 60 minutes).`);
+      } else {
+        setResetLink((current) => ({ ...current, [u.id]: data.link }));
+        say(u.id, 'info', 'E-mail non configuré sur le serveur : transmettez ce lien à l’utilisateur (valable 60 minutes, usage unique).');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const membershipOf = (user: UserRow, projectId: string) => user.memberships.find((m) => m.projectId === projectId);
 
@@ -238,7 +351,8 @@ export default function AdminUsers({
               </thead>
               <tbody>
                 {visible.map((u) => (
-                  <tr key={u.id}>
+                  <Fragment key={u.id}>
+                  <tr>
                     <td>
                       <strong>{u.name}</strong>
                       {u.isAdmin ? (
@@ -329,6 +443,28 @@ export default function AdminUsers({
                           style={{ padding: '6px 10px' }}
                         >
                           {notice[u.id].text}
+                          {resetLink[u.id] && notice[u.id].tone === 'info' ? (
+                            <div className="row mt-8" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                              <input
+                                className="input mono small"
+                                readOnly
+                                value={resetLink[u.id]}
+                                onFocus={(e) => e.target.select()}
+                                aria-label="Lien de réinitialisation"
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-secondary nowrap"
+                                onClick={() =>
+                                  navigator.clipboard
+                                    ?.writeText(resetLink[u.id])
+                                    .then(() => say(u.id, 'ok', 'Lien copié : transmettez-le à l’utilisateur.'))
+                                }
+                              >
+                                Copier
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </td>
@@ -345,8 +481,65 @@ export default function AdminUsers({
                       <button type="button" className="btn btn-ghost" onClick={() => patch(u.id, { isAdmin: !u.isAdmin })} disabled={busy}>
                         {u.isAdmin ? 'Retirer admin' : 'Passer admin'}
                       </button>
+                      <br />
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => (editing?.userId === u.id ? setEditing(null) : startEdit(u))}
+                        disabled={busy}
+                        aria-expanded={editing?.userId === u.id}
+                      >
+                        {editing?.userId === u.id ? 'Fermer' : 'Modifier'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => sendResetLink(u)}
+                        disabled={busy || u.status === 'DISABLED'}
+                        title={u.status === 'DISABLED' ? 'Réactivez le compte d’abord' : 'Envoyer un lien pour choisir un nouveau mot de passe'}
+                      >
+                        Réinitialiser le mot de passe
+                      </button>
                     </td>
                   </tr>
+                  {editing?.userId === u.id ? (
+                    <tr>
+                      <td colSpan={7} style={{ background: 'var(--color-bg)' }}>
+                        <div className="small muted" style={{ marginBottom: 12 }}>
+                          Modifier le profil de <strong>{u.name}</strong>
+                        </div>
+                        <div className="form-grid">
+                          {PROFILE_INPUTS.map((f) => (
+                            <div className="field" key={f.key}>
+                              <label htmlFor={`pf-${u.id}-${f.key}`}>
+                                {f.label}
+                                {f.required ? ' *' : ''}
+                              </label>
+                              <input
+                                className="input"
+                                id={`pf-${u.id}-${f.key}`}
+                                type={f.type ?? 'text'}
+                                autoComplete="off"
+                                value={editing.form[f.key]}
+                                onChange={(e) => setEditing({ userId: u.id, form: { ...editing.form, [f.key]: e.target.value } })}
+                                onKeyDown={(e) => e.key === 'Enter' && saveProfile(u)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {editError ? <div className="alert alert-error mt-16">{editError}</div> : null}
+                        <div className="row mt-16">
+                          <button type="button" className="btn btn-primary" onClick={() => saveProfile(u)} disabled={busy}>
+                            {busy ? 'Enregistrement…' : 'Enregistrer'}
+                          </button>
+                          <button type="button" className="btn btn-secondary" onClick={() => setEditing(null)} disabled={busy}>
+                            Annuler
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
