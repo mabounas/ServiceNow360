@@ -402,20 +402,23 @@ export default function PlanningBoard({
                 />
               </div>
               <div className="field">
-                <label htmlFor="n-start">Début</label>
+                <label htmlFor="n-start">{draft.isMilestone ? 'Date du jalon' : 'Début'}</label>
                 <input className="input" id="n-start" type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} />
               </div>
-              <div className="field">
-                <label htmlFor="n-end">Fin</label>
-                <input
-                  className="input"
-                  id="n-end"
-                  type="date"
-                  value={draft.endDate}
-                  disabled={draft.isMilestone}
-                  onChange={(e) => setDraft({ ...draft, endDate: e.target.value })}
-                />
-              </div>
+              {draft.isMilestone ? (
+                <div className="field" />
+              ) : (
+                <div className="field">
+                  <label htmlFor="n-end">Fin</label>
+                  <input
+                    className="input"
+                    id="n-end"
+                    type="date"
+                    value={draft.endDate}
+                    onChange={(e) => setDraft({ ...draft, endDate: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="field span-2">
                 <label className="row small" style={{ gap: 8 }}>
                   <input
@@ -641,7 +644,7 @@ export default function PlanningBoard({
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="e-start">Début</label>
+                    <label htmlFor="e-start">{selected.isMilestone ? 'Date du jalon' : 'Début'}</label>
                     <input
                       className="input"
                       id="e-start"
@@ -650,19 +653,23 @@ export default function PlanningBoard({
                       defaultValue={selected.startDate.slice(0, 10)}
                       onChange={(e) => e.target.value && saveSelected({ startDate: new Date(e.target.value).toISOString() })}
                     />
+                    {selected.isMilestone ? (
+                      <div className="field-hint">Un jalon est ponctuel : cette date sert de début et de fin.</div>
+                    ) : null}
                   </div>
-                  <div className="field">
-                    <label htmlFor="e-end">Fin</label>
-                    <input
-                      className="input"
-                      id="e-end"
-                      type="date"
-                      disabled={selected.isMilestone}
-                      key={`end-${selected.id}-${selected.endDate}`}
-                      defaultValue={selected.endDate.slice(0, 10)}
-                      onChange={(e) => e.target.value && saveSelected({ endDate: new Date(e.target.value).toISOString() })}
-                    />
-                  </div>
+                  {selected.isMilestone ? null : (
+                    <div className="field">
+                      <label htmlFor="e-end">Fin</label>
+                      <input
+                        className="input"
+                        id="e-end"
+                        type="date"
+                        key={`end-${selected.id}-${selected.endDate}`}
+                        defaultValue={selected.endDate.slice(0, 10)}
+                        onChange={(e) => e.target.value && saveSelected({ endDate: new Date(e.target.value).toISOString() })}
+                      />
+                    </div>
+                  )}
                   {selectedIsParent ? (
                     <div className="field">
                       <label>Avancement</label>

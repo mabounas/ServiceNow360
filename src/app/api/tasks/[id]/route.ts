@@ -50,10 +50,12 @@ export async function PATCH(request: Request, { params }: Params) {
       if (Number.isNaN(end.getTime())) return fail(400, 'Date de fin invalide.');
       data.endDate = end;
     }
+    // Un jalon est ponctuel : fin = début (appliqué avant le contrôle, sinon décaler un jalon plus tard échoue).
+    if ((body.isMilestone ?? task.isMilestone) === true) {
+      end = start;
+      data.endDate = start;
+    }
     if (end < start) return fail(400, 'La date de fin précède la date de début.');
-
-    // Un jalon est ponctuel : fin = début.
-    if ((body.isMilestone ?? task.isMilestone) === true) data.endDate = data.startDate ?? start;
 
     // Cohérence du statut avec l'avancement saisi.
     if (body.status === undefined) {
