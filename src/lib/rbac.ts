@@ -102,38 +102,14 @@ export function canManageMembers(user: SessionUser, role: EffectiveRole) {
 }
 
 /**
- * Filtre Prisma traduisant le tableau de visibilité §2.5.
- *
- * - MEMBER      : uniquement les tickets qu'il a créés, dont il suit l'avancement ;
- *                 il peut en déclarer de nouveaux
- * - SUPERVISOR  : tous les tickets du projet
- * - VIEWER      : tous les tickets du projet, en lecture seule
- * - TECHNICIAN  : les tickets qui lui sont assignés, plus la file non assignée
- *                 en début de circuit (sans quoi personne ne peut qualifier)
- * - PROJECT_MANAGER / ADMIN : tous les tickets du projet
+ * Visibilité des tickets : tout membre du projet, quel que soit son rôle
+ * (administrateur, chef de projet, superviseur, technicien, membre, observateur),
+ * voit tous les tickets du projet. Ce que chacun peut en faire est réglé ailleurs
+ * (transitions, modification, affectation ; suppression réservée à l'administrateur).
+ * Les notes internes restent réservées à l'équipe (voir la fiche ticket).
  */
-export function ticketScope(projectId: string, role: EffectiveRole, userId: string): Prisma.TicketWhereInput {
-  const base: Prisma.TicketWhereInput = { projectId };
-
-  switch (role) {
-    case 'ADMIN':
-    case 'PROJECT_MANAGER':
-    case 'SUPERVISOR':
-    case 'VIEWER':
-      return base;
-    case 'TECHNICIAN':
-      return {
-        ...base,
-        OR: [
-          { assigneeId: userId },
-          { assigneeId: null, status: { in: ['NEW', 'IN_QUALIFICATION', 'SUBMITTED', 'IN_ANALYSIS'] } },
-        ],
-      };
-    case 'MEMBER':
-    default:
-      // Ses propres déclarations, et les tickets qui lui ont été affectés.
-      return { ...base, OR: [{ createdById: userId }, { assigneeId: userId }] };
-  }
+export function ticketScope(projectId: string, _role: EffectiveRole, _userId: string): Prisma.TicketWhereInput {
+  return { projectId };
 }
 
 /** Vérifie l'accès à un ticket précis et renvoie le contexte d'acteur. */

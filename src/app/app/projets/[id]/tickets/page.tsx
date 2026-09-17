@@ -154,13 +154,9 @@ export default async function TicketsPage({
         <div className="panel-head">
           <h3 className="panel-title">{tickets.length} ticket(s)</h3>
           <span className="small muted">
-            {role === 'MEMBER'
-              ? 'Vous voyez les tickets que vous avez déclarés et ceux qui vous sont affectés.'
-              : role === 'TECHNICIAN'
-                ? 'Vous voyez les tickets qui vous sont assignés et la file à qualifier.'
-                : role === 'VIEWER'
-                  ? 'Vous voyez tous les tickets du projet, en lecture seule.'
-                  : 'Vous voyez tous les tickets du projet.'}
+            {role === 'VIEWER'
+              ? 'Vous voyez tous les tickets du projet, en lecture seule.'
+              : 'Vous voyez tous les tickets du projet.'}
           </span>
         </div>
         <div className="panel-body panel-body-flush table-wrap">
