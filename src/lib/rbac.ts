@@ -131,7 +131,8 @@ export function ticketScope(projectId: string, role: EffectiveRole, userId: stri
       };
     case 'MEMBER':
     default:
-      return { ...base, createdById: userId };
+      // Ses propres déclarations, et les tickets qui lui ont été affectés.
+      return { ...base, OR: [{ createdById: userId }, { assigneeId: userId }] };
   }
 }
 
