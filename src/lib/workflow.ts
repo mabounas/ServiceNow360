@@ -19,6 +19,8 @@ export type Transition = {
 
 const STAFF: Actor[] = ['ADMIN', 'PROJECT_MANAGER', 'TECHNICIAN'];
 const GOVERNANCE: Actor[] = ['ADMIN', 'PROJECT_MANAGER', 'SUPERVISOR'];
+/** Qui fait avancer le travail : l'équipe et la personne affectée, quel que soit son rôle. */
+const WORKER: Actor[] = [...STAFF, 'ASSIGNEE'];
 /** La clôture d'un ticket appartient à la personne qui l'a déclaré. */
 const CLOSER: Actor[] = ['CREATOR'];
 
@@ -70,12 +72,12 @@ function decisions(): Transition[] {
 
 /** §3.2.2 — cycle de vie des évolutions et nouvelles demandes (gouvernance projet). */
 const CHANGE_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
-  SUBMITTED: [{ to: 'IN_ANALYSIS', label: "Lancer l'analyse de faisabilité", by: STAFF }, ...decisions()],
-  IN_ANALYSIS: [{ to: 'ESTIMATED', label: 'Enregistrer le chiffrage', by: STAFF }, ...decisions()],
-  ESTIMATED: [{ to: 'PENDING_ARBITRATION', label: "Soumettre à l'arbitrage", by: STAFF }, ...decisions()],
+  SUBMITTED: [{ to: 'IN_ANALYSIS', label: "Lancer l'analyse de faisabilité", by: WORKER }, ...decisions()],
+  IN_ANALYSIS: [{ to: 'ESTIMATED', label: 'Enregistrer le chiffrage', by: WORKER }, ...decisions()],
+  ESTIMATED: [{ to: 'PENDING_ARBITRATION', label: "Soumettre à l'arbitrage", by: WORKER }, ...decisions()],
   PENDING_ARBITRATION: decisions(),
   ACCEPTED_PLANNED: [
-    { to: 'IN_DEVELOPMENT', label: 'Démarrer la réalisation', by: STAFF },
+    { to: 'IN_DEVELOPMENT', label: 'Démarrer la réalisation', by: WORKER },
     { to: 'POSTPONED', label: 'Reporter à une phase ultérieure', by: GOVERNANCE, requiresNote: true },
   ],
   IN_DEVELOPMENT: [
