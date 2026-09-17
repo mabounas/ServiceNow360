@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { getProjectAccess } from '@/lib/rbac';
+import { canContribute, getProjectAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { notify } from '@/lib/notify';
 import { fullName } from '@/lib/labels';
@@ -15,7 +15,8 @@ export async function POST(request: Request, { params }: Params) {
 
     const task = await prisma.task.findUnique({ where: { id }, select: { id: true, name: true, projectId: true } });
     if (!task) return fail(404, 'Tâche introuvable.');
-    await getProjectAccess(user, task.projectId);
+    const { role } = await getProjectAccess(user, task.projectId);
+    if (!canContribute(role)) return fail(403, 'Votre profil est en lecture seule sur ce projet.');
 
     const body = await request.json();
     const text = String(body.body ?? '').trim();

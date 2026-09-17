@@ -4,7 +4,7 @@ import type { TicketStatus, TicketType } from '@prisma/client';
  * Rôle effectif d'un utilisateur sur un projet donné.
  * ADMIN est un rôle global (§2.5 du cahier des charges).
  */
-export type EffectiveRole = 'ADMIN' | 'PROJECT_MANAGER' | 'SUPERVISOR' | 'TECHNICIAN' | 'MEMBER';
+export type EffectiveRole = 'ADMIN' | 'PROJECT_MANAGER' | 'SUPERVISOR' | 'TECHNICIAN' | 'MEMBER' | 'VIEWER';
 
 /** Acteurs autorisés à déclencher une transition. */
 type Actor = EffectiveRole | 'CREATOR' | 'ASSIGNEE';
@@ -122,6 +122,8 @@ export function availableTransitions(
   status: TicketStatus,
   ctx: ActorContext,
 ): Transition[] {
+  // L'observateur consulte sans jamais agir, même sur un ticket qui le désignerait.
+  if (ctx.role === 'VIEWER') return [];
   return transitionsFrom(type, status).filter((t) => actorMatches(t.by, ctx));
 }
 

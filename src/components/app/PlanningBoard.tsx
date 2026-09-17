@@ -43,6 +43,7 @@ export default function PlanningBoard({
   baselines,
   editable,
   canWriteMeetings = false,
+  canComment = true,
 }: {
   projectId: string;
   tasks: PlanTask[];
@@ -51,6 +52,7 @@ export default function PlanningBoard({
   baselines: Baseline[];
   editable: boolean;
   canWriteMeetings?: boolean;
+  canComment?: boolean;
 }) {
   const router = useRouter();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -775,15 +777,21 @@ export default function PlanningBoard({
                 ) : (
                   <div className="small muted">Aucun commentaire sur cette tâche.</div>
                 )}
-                <div className="field">
-                  <label htmlFor="e-comment">Ajouter un commentaire</label>
-                  <textarea className="input" id="e-comment" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} />
-                </div>
-                <div>
-                  <button type="button" className="btn btn-primary" onClick={postComment} disabled={busy || !comment.trim()}>
-                    Publier le commentaire
-                  </button>
-                </div>
+                {canComment ? (
+                  <>
+                  <div className="field">
+                    <label htmlFor="e-comment">Ajouter un commentaire</label>
+                    <textarea className="input" id="e-comment" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} />
+                  </div>
+                  <div>
+                    <button type="button" className="btn btn-primary" onClick={postComment} disabled={busy || !comment.trim()}>
+                      Publier le commentaire
+                    </button>
+                  </div>
+                  </>
+                ) : (
+                  <div className="small muted">Profil en lecture seule : vous ne pouvez pas commenter.</div>
+                )}
               </div>
             ) : null}
 

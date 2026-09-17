@@ -40,6 +40,13 @@ export default async function ProjectLayout({
 
       <ProjectNav projectId={id} canManage={canManageMembers(user, role)} />
 
+      {role === 'VIEWER' ? (
+        <div className="alert alert-info mb-24 no-print">
+          Accès en <strong>lecture seule</strong> : vous consultez le planning, les tickets et les réunions de ce projet
+          sans pouvoir les modifier.
+        </div>
+      ) : null}
+
       {children}
     </>
   );

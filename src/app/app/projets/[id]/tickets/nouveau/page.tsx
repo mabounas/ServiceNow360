@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/auth';
-import { getProjectAccess } from '@/lib/rbac';
+import { notFound } from 'next/navigation';
+import { canContribute, getProjectAccess } from '@/lib/rbac';
 import NewTicketForm from '@/components/app/NewTicketForm';
 
 export const dynamic = 'force-dynamic';
@@ -7,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export default async function NewTicketPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
-  await getProjectAccess(user, id);
+  const { role } = await getProjectAccess(user, id);
+  if (!canContribute(role)) notFound();
 
   return (
     <>

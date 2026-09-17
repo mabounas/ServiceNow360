@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { isStaff, requireTicketAccess } from '@/lib/rbac';
+import { assertTicketAssignable, canEditTicketContent, isStaff, requireTicketAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { computeSlaDueDates } from '@/lib/sla';
 import { audit } from '@/lib/audit';
@@ -54,20 +54,70 @@ export async function DELETE(_request: Request, { params }: Params) {
   });
 }
 
+const CONTENT_FIELDS = {
+  title: { label: 'titre', max: 200, required: true },
+  description: { label: 'description', max: 20_000, required: true },
+  moduleName: { label: 'module', max: 200 },
+  subCategory: { label: 'sous-catégorie', max: 120 },
+  environmentName: { label: 'environnement', max: 120 },
+  reproSteps: { label: 'étapes de reproduction', max: 20_000 },
+  businessJustification: { label: 'justification métier', max: 20_000 },
+  expectedBenefit: { label: 'bénéfice attendu', max: 20_000 },
+  businessUrgency: { label: 'urgence business', max: 120 },
+  estimatedBudget: { label: 'budget envisagé', max: 120 },
+} as const;
+
+/** Champs que l'équipe peut aussi reclasser lors de la qualification. */
+const TRIAGE_FIELDS = new Set(['moduleName', 'subCategory', 'environmentName']);
+
 /**
- * Mise à jour des champs de qualification (priorité, sévérité, module, assignation
- * directe, rattachement à une tâche du planning). Réservée à l'équipe projet.
+ * Mise à jour d'un ticket.
+ *
+ * - Contenu déclaré (titre, description, champs du formulaire) : créateur,
+ *   superviseur, chef de projet ou administrateur, tant que le ticket n'est pas
+ *   clôturé. Le module, la sous-catégorie et l'environnement restent aussi
+ *   modifiables par l'équipe technique pour le tri.
+ * - Qualification (priorité, sévérité, chiffrage, assignation, tâche liée) :
+ *   équipe projet uniquement.
  */
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
     const user = await requireUser();
     const { id } = await params;
-    const { ticket, role } = await requireTicketAccess(user, id);
-    if (!isStaff(role)) return fail(403, 'Seule l’équipe projet peut modifier la qualification du ticket.');
-
+    const { ticket, role, ctx } = await requireTicketAccess(user, id);
     const body = await request.json();
+
+    const staff = isStaff(role);
+    const contentAllowed = canEditTicketContent(role, ctx.isCreator, ticket.status);
     const data: Prisma.TicketUpdateInput = {};
-    const events: { field: string; fromValue: string | null; toValue: string | null }[] = [];
+    const events: { field: string; fromValue: string | null; toValue: string | null; note?: string }[] = [];
+
+    // ── Contenu ──
+    for (const [key, rule] of Object.entries(CONTENT_FIELDS) as [keyof typeof CONTENT_FIELDS, (typeof CONTENT_FIELDS)[keyof typeof CONTENT_FIELDS]][]) {
+      if (body[key] === undefined) continue;
+      const value = String(body[key] ?? '').trim();
+      const previous = (ticket as Record<string, unknown>)[key] as string | null;
+      // Une valeur renvoyée à l'identique n'est pas une modification.
+      if ((previous ?? '') === value) continue;
+      const allowed = contentAllowed || (staff && TRIAGE_FIELDS.has(key) && ticket.status !== 'CLOSED');
+      if (!allowed) {
+        return fail(
+          403,
+          ticket.status === 'CLOSED'
+            ? 'Un ticket clôturé ne peut plus être modifié.'
+            : 'Vous ne pouvez pas modifier le contenu de ce ticket.',
+        );
+      }
+      if ('required' in rule && rule.required && !value) return fail(400, `Le champ ${rule.label} est obligatoire.`);
+      if (value.length > rule.max) return fail(400, `Le champ ${rule.label} est trop long.`);
+      (data as Record<string, unknown>)[key] = value || null;
+      const short = (v: string | null) => (v && v.length > 80 ? `${v.slice(0, 80)}…` : v);
+      events.push({ field: key, fromValue: short(previous), toValue: short(value || null), note: `${rule.label} modifié` });
+    }
+
+    // ── Qualification ──
+    const triage = ['priority', 'severity', 'estimateDays', 'estimateCost', 'assigneeId', 'taskId'].some((k) => body[k] !== undefined);
+    if (triage && !staff) return fail(403, 'Seule l’équipe projet peut modifier la qualification du ticket.');
 
     if (body.priority && body.priority !== ticket.priority) {
       data.priority = body.priority;
@@ -81,26 +131,20 @@ export async function PATCH(request: Request, { params }: Params) {
         Object.assign(data, computeSlaDueDates(body.severity, ticket.createdAt));
       }
     }
-    if (body.moduleName !== undefined) data.moduleName = String(body.moduleName).trim() || null;
-    if (body.subCategory !== undefined) data.subCategory = String(body.subCategory).trim() || null;
-    if (body.environmentName !== undefined) data.environmentName = String(body.environmentName).trim() || null;
     if (body.estimateDays !== undefined) data.estimateDays = body.estimateDays === '' ? null : Number(body.estimateDays);
     if (body.estimateCost !== undefined) data.estimateCost = body.estimateCost === '' ? null : Number(body.estimateCost);
 
     if (body.assigneeId !== undefined) {
       const assigneeId = body.assigneeId || null;
       if (assigneeId) {
-        const member = await prisma.projectMember.findUnique({
-          where: { projectId_userId: { projectId: ticket.projectId, userId: assigneeId } },
-          select: { id: true },
-        });
-        const admin = await prisma.user.findFirst({ where: { id: assigneeId, isAdmin: true }, select: { id: true } });
-        if (!member && !admin) return fail(400, "Ce destinataire n'est pas affecté au projet.");
+        await assertTicketAssignable(ticket.projectId, assigneeId);
         data.assignee = { connect: { id: assigneeId } };
       } else {
         data.assignee = { disconnect: true };
       }
-      events.push({ field: 'assignee', fromValue: ticket.assigneeId, toValue: assigneeId });
+      if (assigneeId !== ticket.assigneeId) {
+        events.push({ field: 'assignee', fromValue: ticket.assigneeId, toValue: assigneeId });
+      }
     }
 
     if (body.taskId !== undefined) {
@@ -112,7 +156,9 @@ export async function PATCH(request: Request, { params }: Params) {
       } else {
         data.task = { disconnect: true };
       }
-      events.push({ field: 'task', fromValue: ticket.taskId, toValue: taskId });
+      if (taskId !== ticket.taskId) {
+        events.push({ field: 'task', fromValue: ticket.taskId, toValue: taskId });
+      }
     }
 
     if (Object.keys(data).length === 0) return ok({ ticket });

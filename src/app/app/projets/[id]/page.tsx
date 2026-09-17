@@ -127,9 +127,11 @@ export default async function ProjectDashboard({ params }: { params: Promise<{ i
           <h1 className="page-title">Pilotage du projet</h1>
         </div>
         <div className="page-actions">
-          <Link href={`/app/projets/${id}/tickets/nouveau`} className="btn btn-primary">
-            Déclarer un ticket
-          </Link>
+          {role !== 'VIEWER' ? (
+            <Link href={`/app/projets/${id}/tickets/nouveau`} className="btn btn-primary">
+              Déclarer un ticket
+            </Link>
+          ) : null}
           <a href={`/api/projects/${id}/export?dataset=tickets`} className="btn btn-secondary">
             Export tickets (CSV)
           </a>

@@ -54,6 +54,35 @@ export async function listAccessibleProjects(user: SessionUser) {
   return memberships.map((m) => ({ project: m.project, role: m.role as EffectiveRole }));
 }
 
+/** Tout profil qui peut agir (créer, commenter) — l'observateur ne fait que consulter. */
+export function canContribute(role: EffectiveRole) {
+  return role !== 'VIEWER';
+}
+
+/**
+ * Modification du contenu déclaré d'un ticket (titre, description, champs du
+ * formulaire) : tant qu'il n'est pas clôturé, par son créateur, le superviseur,
+ * le chef de projet ou l'administrateur. La qualification reste à l'équipe.
+ */
+export function canEditTicketContent(role: EffectiveRole, isCreator: boolean, status: string) {
+  if (status === 'CLOSED' || role === 'VIEWER') return false;
+  return isCreator || role === 'ADMIN' || role === 'PROJECT_MANAGER' || role === 'SUPERVISOR';
+}
+
+/** Un ticket ne peut être assigné qu'à un membre actif du projet qui n'est pas observateur. */
+export async function assertTicketAssignable(projectId: string, userId: string) {
+  const member = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId } },
+    select: { role: true },
+  });
+  if (member && member.role !== 'VIEWER') return;
+  if (!member) {
+    const admin = await prisma.user.findFirst({ where: { id: userId, isAdmin: true }, select: { id: true } });
+    if (admin) return;
+  }
+  throw new HttpError(400, "Ce destinataire ne peut pas recevoir de ticket sur ce projet.");
+}
+
 export function isStaff(role: EffectiveRole) {
   return role === 'ADMIN' || role === 'PROJECT_MANAGER' || role === 'TECHNICIAN';
 }
@@ -73,6 +102,7 @@ export function canManageMembers(user: SessionUser, role: EffectiveRole) {
  * - MEMBER      : uniquement les tickets qu'il a créés, dont il suit l'avancement ;
  *                 il peut en déclarer de nouveaux
  * - SUPERVISOR  : tous les tickets du projet
+ * - VIEWER      : tous les tickets du projet, en lecture seule
  * - TECHNICIAN  : les tickets qui lui sont assignés, plus la file non assignée
  *                 en début de circuit (sans quoi personne ne peut qualifier)
  * - PROJECT_MANAGER / ADMIN : tous les tickets du projet
@@ -84,6 +114,7 @@ export function ticketScope(projectId: string, role: EffectiveRole, userId: stri
     case 'ADMIN':
     case 'PROJECT_MANAGER':
     case 'SUPERVISOR':
+    case 'VIEWER':
       return base;
     case 'TECHNICIAN':
       return {

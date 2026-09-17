@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
-import { isStaff, requireTicketAccess } from '@/lib/rbac';
+import { canContribute, canEditTicketContent, isStaff, requireTicketAccess } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import {
   ENVIRONMENTS,
@@ -19,6 +19,7 @@ import TicketQualification from '@/components/app/TicketQualification';
 import CommentForm from '@/components/app/CommentForm';
 import SatisfactionForm from '@/components/app/SatisfactionForm';
 import TicketDelete from '@/components/app/TicketDelete';
+import TicketEdit from '@/components/app/TicketEdit';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,8 +46,9 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
     }),
     prisma.attachment.findMany({ where: { ticketId: id, commentId: null } }),
     prisma.projectMember.findMany({
-      where: { projectId: ticket.projectId },
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      // Un observateur ne reçoit pas de ticket : il n'apparaît pas dans les listes d'assignation.
+      where: { projectId: ticket.projectId, role: { not: 'VIEWER' } },
     }),
     prisma.task.findMany({ where: { projectId: ticket.projectId }, select: { id: true, name: true }, orderBy: { sortOrder: 'asc' } }),
   ]);
@@ -57,6 +59,8 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const state = slaState(ticket);
 
   const memberOptions = members.map((m) => ({ id: m.user.id, name: fullName(m.user) }));
+  const canEdit = canEditTicketContent(role, ctx.isCreator, ticket.status);
+  const canComment = canContribute(role);
 
   return (
     <>
@@ -76,6 +80,27 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
           <span className="badge badge-accent">{TICKET_STATUS_LABEL[ticket.status]}</span>
         </div>
       </div>
+
+      {canEdit ? (
+        <div className="mb-24 no-print">
+          <TicketEdit
+            ticketId={ticket.id}
+            type={ticket.type}
+            initial={{
+              title: ticket.title,
+              description: ticket.description,
+              moduleName: ticket.moduleName,
+              subCategory: ticket.subCategory,
+              environmentName: ticket.environmentName,
+              reproSteps: ticket.reproSteps,
+              businessJustification: ticket.businessJustification,
+              expectedBenefit: ticket.expectedBenefit,
+              businessUrgency: ticket.businessUrgency,
+              estimatedBudget: ticket.estimatedBudget,
+            }}
+          />
+        </div>
+      ) : null}
 
       <div className="steps mb-24">
         {steps.map((step, index) => (
@@ -174,7 +199,11 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
                 </div>
               )}
 
-              <CommentForm ticketId={ticket.id} canPostInternal={staff} />
+              {canComment ? (
+                <CommentForm ticketId={ticket.id} canPostInternal={staff} />
+              ) : (
+                <div className="small muted mt-16">Profil en lecture seule : vous ne pouvez pas commenter.</div>
+              )}
             </div>
           </div>
 

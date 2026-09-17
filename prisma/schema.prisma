@@ -25,6 +25,7 @@ enum ProjectRole {
   SUPERVISOR // superviseur — voit tous les tickets du projet
   TECHNICIAN // technicien IT — traite les tickets assignés
   PROJECT_MANAGER // chef de projet — pilote le planning et arbitre
+  VIEWER // observateur (direction) — consulte tout, ne modifie rien
 }
 
 model User {

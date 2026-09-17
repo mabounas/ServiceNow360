@@ -1,5 +1,5 @@
 import { requireUser } from '@/lib/auth';
-import { canEditPlanning, getProjectAccess } from '@/lib/rbac';
+import { canContribute, canEditPlanning, getProjectAccess } from '@/lib/rbac';
 import { canWriteMeetings } from '@/lib/meetings';
 import { prisma } from '@/lib/prisma';
 import PlanningBoard from '@/components/app/PlanningBoard';
@@ -86,6 +86,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ id: s
         }))}
         editable={canEditPlanning(role)}
         canWriteMeetings={canWriteMeetings(role)}
+        canComment={canContribute(role)}
       />
     </>
   );

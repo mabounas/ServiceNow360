@@ -76,6 +76,7 @@ export const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
   SUPERVISOR: 'Superviseur',
   TECHNICIAN: 'Technicien IT',
   PROJECT_MANAGER: 'Chef de projet',
+  VIEWER: 'Observateur (lecture seule)',
 };
 
 export const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {

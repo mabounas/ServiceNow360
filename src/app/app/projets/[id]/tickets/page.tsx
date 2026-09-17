@@ -42,7 +42,7 @@ export default async function TicketsPage({
       take: 300,
     }),
     prisma.projectMember.findMany({
-      where: { projectId: id },
+      where: { projectId: id, role: { not: 'VIEWER' } },
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
     }),
   ]);
@@ -57,9 +57,11 @@ export default async function TicketsPage({
           <h1 className="page-title">Tickets</h1>
         </div>
         <div className="page-actions">
-          <Link href={`/app/projets/${id}/tickets/nouveau`} className="btn btn-primary">
-            Déclarer un ticket
-          </Link>
+          {role !== 'VIEWER' ? (
+            <Link href={`/app/projets/${id}/tickets/nouveau`} className="btn btn-primary">
+              Déclarer un ticket
+            </Link>
+          ) : null}
           <a href={`/api/projects/${id}/export?dataset=tickets&${query.toString()}`} className="btn btn-secondary">
             Exporter (CSV)
           </a>
@@ -156,7 +158,9 @@ export default async function TicketsPage({
               ? 'Vous voyez uniquement les tickets que vous avez déclarés.'
               : role === 'TECHNICIAN'
                 ? 'Vous voyez les tickets qui vous sont assignés et la file à qualifier.'
-                : 'Vous voyez tous les tickets du projet.'}
+                : role === 'VIEWER'
+                  ? 'Vous voyez tous les tickets du projet, en lecture seule.'
+                  : 'Vous voyez tous les tickets du projet.'}
           </span>
         </div>
         <div className="panel-body panel-body-flush table-wrap">

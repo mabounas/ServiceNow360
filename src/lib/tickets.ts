@@ -1,7 +1,7 @@
 import type { Prisma, Severity, TicketStatus, TicketType } from '@prisma/client';
 import { prisma } from './prisma';
 import { HttpError, type SessionUser } from './auth';
-import { getProjectAccess } from './rbac';
+import { assertTicketAssignable, canContribute, canEditPlanning, getProjectAccess } from './rbac';
 import { computeSlaDueDates } from './sla';
 import { TICKET_PREFIX, TICKET_STATUS_LABEL, TICKET_TYPE_SHORT } from './labels';
 import { canTransition, initialStatus, type ActorContext } from './workflow';
@@ -44,7 +44,8 @@ const SEVERITY_TO_PRIORITY: Record<Severity, 'P1' | 'P2' | 'P3' | 'P4'> = {
 };
 
 export async function createTicket(user: SessionUser, input: CreateTicketInput) {
-  await getProjectAccess(user, input.projectId);
+  const { role } = await getProjectAccess(user, input.projectId);
+  if (!canContribute(role)) throw new HttpError(403, 'Votre profil est en lecture seule sur ce projet.');
 
   if (!input.title?.trim()) throw new HttpError(400, 'Le titre est obligatoire.');
   if (!input.description?.trim()) throw new HttpError(400, 'La description est obligatoire.');
@@ -159,12 +160,7 @@ export async function applyTransition(
   const data: Prisma.TicketUpdateInput = { status: input.to };
 
   if (input.assigneeId !== undefined && input.assigneeId !== null) {
-    const member = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId: ticket.projectId, userId: input.assigneeId } },
-      select: { id: true },
-    });
-    const isAdmin = await prisma.user.findFirst({ where: { id: input.assigneeId, isAdmin: true }, select: { id: true } });
-    if (!member && !isAdmin) throw new HttpError(400, "Ce destinataire n'est pas affecté au projet.");
+    await assertTicketAssignable(ticket.projectId, input.assigneeId);
     data.assignee = { connect: { id: input.assigneeId } };
   }
   if (input.estimateDays != null) data.estimateDays = input.estimateDays;
@@ -208,7 +204,21 @@ export async function applyTransition(
       });
     }
 
-    // §4.2.4 — une demande acceptée génère la tâche correspondante au planning.
+    // §4.2.4 — une demande acceptée génère la tâche correspondante au planning,
+    // mais seuls l'administrateur et le chef de projet modifient le planning :
+    // acceptée par un superviseur, la demande attend d'être planifiée.
+    if (input.to === 'ACCEPTED_PLANNED' && !result.taskId && !canEditPlanning(ctx.role)) {
+      await tx.ticketEvent.create({
+        data: {
+          ticketId,
+          actorId: user.id,
+          field: 'task',
+          note: 'Demande acceptée : à intégrer au planning par le chef de projet.',
+        },
+      });
+      return { ...result, awaitingPlanning: true as const };
+    }
+
     if (input.to === 'ACCEPTED_PLANNED' && !result.taskId) {
       const start = new Date(now);
       const days = Math.max(1, Math.round(result.estimateDays ?? 5));
@@ -238,6 +248,20 @@ export async function applyTransition(
 
     return result;
   });
+
+  if ('awaitingPlanning' in updated) {
+    const managers = await prisma.projectMember.findMany({
+      where: { projectId: ticket.projectId, role: 'PROJECT_MANAGER' },
+      select: { userId: true },
+    });
+    await notify({
+      userIds: managers.map((m) => m.userId),
+      title: `${updated.reference} — acceptée, à planifier`,
+      body: `${updated.title}
+La demande a été acceptée. Créez la tâche au planning puis rattachez-la au ticket.`,
+      link: `/app/tickets/${updated.id}`,
+    });
+  }
 
   const audience = await ticketAudience(ticket.projectId, updated);
   await notify({

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import { isStaff, requireTicketAccess } from '@/lib/rbac';
+import { canContribute, isStaff, requireTicketAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
 import { notify, ticketAudience } from '@/lib/notify';
 import { fullName } from '@/lib/labels';
@@ -13,6 +13,7 @@ export async function POST(request: Request, { params }: Params) {
     const user = await requireUser();
     const { id } = await params;
     const { ticket, role } = await requireTicketAccess(user, id);
+    if (!canContribute(role)) return fail(403, 'Votre profil est en lecture seule sur ce projet.');
 
     const body = await request.json();
     const text = String(body.body ?? '').trim();
