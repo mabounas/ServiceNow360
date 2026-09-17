@@ -6,6 +6,9 @@ import type { TicketStatus } from '@prisma/client';
 import { TICKET_STATUS_LABEL } from '@/lib/labels';
 
 type Transition = { to: TicketStatus; label: string; requiresNote?: boolean };
+
+// Statuts de fin : aucune affectation à proposer.
+const CLOSING: TicketStatus[] = ['CLOSED', 'REJECTED', 'REFUSED', 'POSTPONED'];
 type Member = { id: string; name: string };
 
 export default function TicketActions({
@@ -13,16 +16,20 @@ export default function TicketActions({
   transitions,
   members,
   needsEstimate,
+  canAssign = false,
+  currentAssigneeId = null,
 }: {
   ticketId: string;
   transitions: Transition[];
   members: Member[];
   needsEstimate: boolean;
+  canAssign?: boolean;
+  currentAssigneeId?: string | null;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<TicketStatus | ''>('');
   const [note, setNote] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
+  const [assigneeId, setAssigneeId] = useState(currentAssigneeId ?? '');
   const [estimateDays, setEstimateDays] = useState('');
   const [estimateCost, setEstimateCost] = useState('');
   const [error, setError] = useState('');
@@ -41,7 +48,7 @@ export default function TicketActions({
         body: JSON.stringify({
           to: selected,
           note,
-          assigneeId: assigneeId || undefined,
+          assigneeId: canAssign && assigneeId ? assigneeId : undefined,
           estimateDays: estimateDays || undefined,
           estimateCost: estimateCost || undefined,
         }),
@@ -60,7 +67,12 @@ export default function TicketActions({
   }
 
   if (transitions.length === 0) {
-    return <div className="small muted">Aucune action disponible à ce stade pour votre rôle.</div>;
+    return (
+      <div className="small muted">
+        Aucune action pour votre rôle à ce stade : le ticket est entre les mains de l’équipe projet (chef de projet ou
+        technicien), qui le qualifie et l’affecte. Vous serez notifié à chaque étape.
+      </div>
+    );
   }
 
   return (
@@ -77,11 +89,11 @@ export default function TicketActions({
         </select>
       </div>
 
-      {selected === 'ASSIGNED' ? (
+      {canAssign && selected && !CLOSING.includes(selected) ? (
         <div className="field">
-          <label htmlFor="tr-assignee">Technicien</label>
+          <label htmlFor="tr-assignee">{selected === 'ASSIGNED' ? 'Technicien (obligatoire)' : 'Affecter à (facultatif)'}</label>
           <select className="input" id="tr-assignee" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-            <option value="">— Sélectionner —</option>
+            <option value="">{selected === 'ASSIGNED' ? '— Sélectionner —' : '— Personne —'}</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}

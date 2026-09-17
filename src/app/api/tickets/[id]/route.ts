@@ -4,6 +4,8 @@ import { assertTicketAssignable, canEditTicketContent, isStaff, requireTicketAcc
 import { fail, handle, ok } from '@/lib/api';
 import { computeSlaDueDates } from '@/lib/sla';
 import { audit } from '@/lib/audit';
+import { notify } from '@/lib/notify';
+import { fullName } from '@/lib/labels';
 import type { Prisma } from '@prisma/client';
 
 type Params = { params: Promise<{ id: string }> };
@@ -170,6 +172,16 @@ export async function PATCH(request: Request, { params }: Params) {
       });
     }
     await audit({ userId: user.id, action: 'ticket.update', entity: 'Ticket', entityId: id, meta: { fields: events.map((e) => e.field) } });
+
+    const newAssignee = events.find((e) => e.field === 'assignee')?.toValue;
+    if (newAssignee && newAssignee !== user.id) {
+      await notify({
+        userIds: [newAssignee],
+        title: `${ticket.reference} — vous a été affecté`,
+        body: `${fullName(user)} vous a affecté le ticket « ${ticket.title} ».`,
+        link: `/app/tickets/${id}`,
+      });
+    }
 
     return ok({ ticket: updated });
   });

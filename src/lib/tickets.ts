@@ -1,7 +1,7 @@
 import type { Prisma, Severity, TicketStatus, TicketType } from '@prisma/client';
 import { prisma } from './prisma';
 import { HttpError, type SessionUser } from './auth';
-import { assertTicketAssignable, canContribute, canEditPlanning, getProjectAccess } from './rbac';
+import { assertTicketAssignable, canContribute, canEditPlanning, getProjectAccess, isStaff } from './rbac';
 import { computeSlaDueDates } from './sla';
 import { TICKET_PREFIX, TICKET_STATUS_LABEL, TICKET_TYPE_SHORT } from './labels';
 import { canTransition, initialStatus, type ActorContext } from './workflow';
@@ -159,7 +159,8 @@ export async function applyTransition(
   const now = new Date();
   const data: Prisma.TicketUpdateInput = { status: input.to };
 
-  if (input.assigneeId !== undefined && input.assigneeId !== null) {
+  if (input.assigneeId !== undefined && input.assigneeId !== null && input.assigneeId !== ticket.assigneeId) {
+    if (!isStaff(ctx.role)) throw new HttpError(403, 'Seule l’équipe projet peut affecter un ticket.');
     await assertTicketAssignable(ticket.projectId, input.assigneeId);
     data.assignee = { connect: { id: input.assigneeId } };
   }

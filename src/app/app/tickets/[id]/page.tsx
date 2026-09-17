@@ -259,9 +259,34 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
                 transitions={transitions.map((t) => ({ to: t.to, label: t.label, requiresNote: t.requiresNote }))}
                 members={memberOptions}
                 needsEstimate={ticket.type !== 'INCIDENT'}
+                canAssign={staff}
+                currentAssigneeId={ticket.assigneeId}
               />
             </div>
           </div>
+
+          {staff ? (
+            <div className="panel">
+              <div className="panel-head">
+                <h3 className="panel-title">Qualification et affectation</h3>
+              </div>
+              <div className="panel-body">
+                <TicketQualification
+                  ticketId={ticket.id}
+                  isIncident={ticket.type === 'INCIDENT'}
+                  initial={{
+                    priority: ticket.priority,
+                    severity: ticket.severity,
+                    moduleName: ticket.moduleName,
+                    assigneeId: ticket.assigneeId,
+                    taskId: ticket.taskId,
+                  }}
+                  members={memberOptions}
+                  tasks={tasks}
+                />
+              </div>
+            </div>
+          ) : null}
 
           <div className="panel">
             <div className="panel-head">
@@ -341,29 +366,6 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
               </table>
             </div>
           </div>
-
-          {staff ? (
-            <div className="panel">
-              <div className="panel-head">
-                <h3 className="panel-title">Qualification</h3>
-              </div>
-              <div className="panel-body">
-                <TicketQualification
-                  ticketId={ticket.id}
-                  isIncident={ticket.type === 'INCIDENT'}
-                  initial={{
-                    priority: ticket.priority,
-                    severity: ticket.severity,
-                    moduleName: ticket.moduleName,
-                    assigneeId: ticket.assigneeId,
-                    taskId: ticket.taskId,
-                  }}
-                  members={memberOptions}
-                  tasks={tasks}
-                />
-              </div>
-            </div>
-          ) : null}
 
           {user.isAdmin && ticket.status !== 'CLOSED' ? (
             <div className="panel">
