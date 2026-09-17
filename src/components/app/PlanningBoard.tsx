@@ -79,6 +79,16 @@ export default function PlanningBoard({
   const parentIds = useMemo(() => new Set(tasks.map((t) => t.parentId).filter(Boolean) as string[]), [tasks]);
   const selectedIsParent = selected ? parentIds.has(selected.id) : false;
   const selectedProgress = selected ? progressOf.get(selected.id) ?? 0 : 0;
+  // Position de la tâche sélectionnée parmi les éléments de même niveau (ordre affiché).
+  const selectedSiblings = selected ? rows.filter((r) => (r.task.parentId ?? null) === (selected.parentId ?? null)) : [];
+  const selectedIndex = selected ? selectedSiblings.findIndex((r) => r.task.id === selected.id) : -1;
+  // Phases possibles : tout élément non jalon qui n'est ni la tâche ni l'une de ses sous-tâches.
+  const phaseOptions = useMemo(() => {
+    if (!selected) return [];
+    const descendants = new Set<string>([selected.id]);
+    for (const r of rows) if (r.task.parentId && descendants.has(r.task.parentId)) descendants.add(r.task.id);
+    return rows.filter((r) => !r.task.isMilestone && !descendants.has(r.task.id));
+  }, [rows, selected]);
   const hovered = hover ? tasks.find((t) => t.id === hover.id) ?? null : null;
   // Suggestions de saisie : responsables déjà utilisés sur le projet, puis membres de l'équipe.
   const ownerSuggestions = useMemo(
@@ -165,6 +175,23 @@ export default function PlanningBoard({
             }
           : t,
       ),
+    );
+    router.refresh();
+  }
+
+  async function reorder(body: { direction?: 'up' | 'down'; parentId?: string | null }) {
+    if (!selected) return;
+    const data = await call(`/api/tasks/${selected.id}/move`, { method: 'POST', body: JSON.stringify(body) });
+    if (!data) return;
+    const next = new Map<string, { parentId: string | null; sortOrder: number }>(
+      data.tasks.map((u: { id: string; parentId: string | null; sortOrder: number }) => [u.id, u]),
+    );
+    setTasks((current) =>
+      current.map((t) => {
+        const u = next.get(t.id);
+        if (!u) return t;
+        return t.id === selected.id ? { ...t, parentId: u.parentId, sortOrder: u.sortOrder } : { ...t, sortOrder: u.sortOrder };
+      }),
     );
     router.refresh();
   }
@@ -730,6 +757,48 @@ export default function PlanningBoard({
                       }
                     />
                     <div className="field-hint">Les champs texte s’enregistrent en quittant le champ.</div>
+                  </div>
+                  <div className="field span-2">
+                    <label htmlFor="e-parent">Position dans le planning</label>
+                    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => reorder({ direction: 'up' })}
+                        disabled={busy || selectedIndex <= 0}
+                        title="Placer avant l’élément précédent du même niveau"
+                      >
+                        ↑ Monter
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => reorder({ direction: 'down' })}
+                        disabled={busy || selectedIndex < 0 || selectedIndex >= selectedSiblings.length - 1}
+                        title="Placer après l’élément suivant du même niveau"
+                      >
+                        ↓ Descendre
+                      </button>
+                      <span className="small muted">
+                        {selectedIndex + 1} / {selectedSiblings.length} dans {selected.parentId ? 'sa phase' : 'le planning'}
+                      </span>
+                    </div>
+                    <select
+                      className="input mt-16"
+                      id="e-parent"
+                      value={selected.parentId ?? ''}
+                      disabled={busy}
+                      onChange={(e) => reorder({ parentId: e.target.value || null })}
+                    >
+                      <option value="">— Aucune phase (premier niveau) —</option>
+                      {phaseOptions.map((r) => (
+                        <option key={r.task.id} value={r.task.id}>
+                          {'   '.repeat(r.depth)}
+                          {r.task.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="field-hint">Changer de phase place la tâche en dernière position de la phase choisie.</div>
                   </div>
                   <div className="field span-2">
                     <hr className="hr" />
