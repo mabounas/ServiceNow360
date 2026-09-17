@@ -53,26 +53,28 @@ const INCIDENT_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
   ],
 };
 
+/**
+ * Décisions de gouvernance sur une demande en cours (§3.2.2) :
+ * accepter, reporter, rejeter ou clôturer sans suite.
+ */
+function decisions(): Transition[] {
+  return [
+    { to: 'ACCEPTED_PLANNED', label: 'Accepter la demande', by: GOVERNANCE },
+    { to: 'POSTPONED', label: 'Reporter à une phase ultérieure', by: GOVERNANCE, requiresNote: true },
+    { to: 'REFUSED', label: 'Rejeter la demande', by: GOVERNANCE, requiresNote: true },
+    { to: 'CLOSED', label: 'Clôturer sans suite', by: GOVERNANCE, requiresNote: true },
+  ];
+}
+
 /** §3.2.2 — cycle de vie des évolutions et nouvelles demandes (gouvernance projet). */
 const CHANGE_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
-  SUBMITTED: [
-    { to: 'IN_ANALYSIS', label: "Lancer l'analyse de faisabilité", by: STAFF },
-    { to: 'REFUSED', label: 'Refuser', by: GOVERNANCE, requiresNote: true },
-  ],
-  IN_ANALYSIS: [
-    { to: 'ESTIMATED', label: 'Enregistrer le chiffrage', by: STAFF },
-    { to: 'REFUSED', label: 'Refuser', by: GOVERNANCE, requiresNote: true },
-  ],
-  ESTIMATED: [
-    { to: 'PENDING_ARBITRATION', label: "Soumettre à l'arbitrage", by: STAFF },
-  ],
-  PENDING_ARBITRATION: [
-    { to: 'ACCEPTED_PLANNED', label: 'Accepter et planifier', by: GOVERNANCE },
-    { to: 'POSTPONED', label: 'Reporter à une phase ultérieure', by: GOVERNANCE, requiresNote: true },
-    { to: 'REFUSED', label: 'Refuser', by: GOVERNANCE, requiresNote: true },
-  ],
+  SUBMITTED: [{ to: 'IN_ANALYSIS', label: "Lancer l'analyse de faisabilité", by: STAFF }, ...decisions()],
+  IN_ANALYSIS: [{ to: 'ESTIMATED', label: 'Enregistrer le chiffrage', by: STAFF }, ...decisions()],
+  ESTIMATED: [{ to: 'PENDING_ARBITRATION', label: "Soumettre à l'arbitrage", by: STAFF }, ...decisions()],
+  PENDING_ARBITRATION: decisions(),
   ACCEPTED_PLANNED: [
     { to: 'IN_DEVELOPMENT', label: 'Démarrer la réalisation', by: STAFF },
+    { to: 'POSTPONED', label: 'Reporter à une phase ultérieure', by: GOVERNANCE, requiresNote: true },
   ],
   IN_DEVELOPMENT: [
     { to: 'DELIVERED', label: 'Livrer', by: [...STAFF, 'ASSIGNEE'] },
@@ -83,9 +85,10 @@ const CHANGE_FLOW: Partial<Record<TicketStatus, Transition[]>> = {
   ],
   POSTPONED: [
     { to: 'PENDING_ARBITRATION', label: "Remettre à l'arbitrage", by: GOVERNANCE },
+    { to: 'CLOSED', label: 'Clôturer sans suite', by: GOVERNANCE, requiresNote: true },
   ],
   REFUSED: [
-    { to: 'CLOSED', label: 'Prendre acte et clôturer', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER'] },
+    { to: 'CLOSED', label: 'Prendre acte et clôturer', by: ['CREATOR', 'ADMIN', 'PROJECT_MANAGER', 'SUPERVISOR'] },
   ],
 };
 

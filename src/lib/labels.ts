@@ -47,7 +47,7 @@ export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
   ESTIMATED: 'Chiffrée',
   PENDING_ARBITRATION: "En attente d'arbitrage",
   ACCEPTED_PLANNED: 'Acceptée / Planifiée',
-  REFUSED: 'Refusée',
+  REFUSED: 'Rejetée',
   POSTPONED: 'Reportée',
   IN_DEVELOPMENT: 'En cours de réalisation',
   DELIVERED: 'Livrée',
