@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function ProjectNav({ projectId, canManage }: { projectId: string; canManage: boolean }) {
+export default function ProjectNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const base = `/app/projets/${projectId}`;
 
@@ -13,7 +13,7 @@ export default function ProjectNav({ projectId, canManage }: { projectId: string
     { href: `${base}/planning`, label: 'Planning / Gantt' },
     { href: `${base}/reunions`, label: 'Réunions' },
     { href: `${base}/risques`, label: 'Risques' },
-    ...(canManage ? [{ href: `${base}/equipe`, label: 'Équipe' }] : []),
+    { href: `${base}/equipe`, label: 'Équipe' },
   ];
 
   return (

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import ProjectNav from '@/components/app/ProjectNav';
 import { requireUser } from '@/lib/auth';
-import { canManageMembers, getProjectAccess } from '@/lib/rbac';
+import { getProjectAccess } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { PROJECT_ROLE_LABEL } from '@/lib/labels';
 
@@ -38,7 +38,7 @@ export default async function ProjectLayout({
         </span>
       </div>
 
-      <ProjectNav projectId={id} canManage={canManageMembers(user, role)} />
+      <ProjectNav projectId={id} />
 
       {role === 'VIEWER' ? (
         <div className="alert alert-info mb-24 no-print">
