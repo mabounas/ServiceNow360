@@ -337,7 +337,7 @@ export default function AdminUsers({
           {visible.length === 0 ? (
             <div className="empty">Aucun compte dans cette catégorie.</div>
           ) : (
-            <table className="table table-compact">
+            <table className="table table-compact table-cards">
               <thead>
                 <tr>
                   <th>Utilisateur</th>
@@ -353,7 +353,7 @@ export default function AdminUsers({
                 {visible.map((u) => (
                   <Fragment key={u.id}>
                   <tr>
-                    <td>
+                    <td className="card-head">
                       <strong>{u.name}</strong>
                       {u.isAdmin ? (
                         <span className="badge badge-accent" style={{ marginLeft: 8 }}>
@@ -363,10 +363,10 @@ export default function AdminUsers({
                       <div className="small muted">{u.email}</div>
                       {u.jobRole ? <div className="small muted">{u.jobRole}</div> : null}
                     </td>
-                    <td className="small">{u.company}</td>
-                    <td className="small mono nowrap">{formatDate(u.createdAt)}</td>
-                    <td className="small">{ACCOUNT_STATUS_LABEL[u.status]}</td>
-                    <td className="small">
+                    <td className="small" data-label="Société">{u.company}</td>
+                    <td className="small mono nowrap" data-label="Inscrit le">{formatDate(u.createdAt)}</td>
+                    <td className="small" data-label="Statut">{ACCOUNT_STATUS_LABEL[u.status]}</td>
+                    <td className="small card-block" data-label="Projets et rôles">
                       {u.memberships.length === 0 ? (
                         <span className="muted">Aucun projet</span>
                       ) : (
@@ -390,8 +390,8 @@ export default function AdminUsers({
                         </ul>
                       )}
                     </td>
-                    <td>
-                      <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                    <td className="card-block" data-label="Affecter à un projet">
+                      <div className="row assign-row" style={{ gap: 6, flexWrap: 'nowrap' }}>
                         <select
                           className="input"
                           aria-label={`Projet pour ${u.name}`}
@@ -468,7 +468,7 @@ export default function AdminUsers({
                         </div>
                       ) : null}
                     </td>
-                    <td className="text-right nowrap">
+                    <td className="text-right nowrap card-actions">
                       {u.status !== 'ACTIVE' ? (
                         <button type="button" className="btn btn-ghost" onClick={() => patch(u.id, { status: 'ACTIVE' })} disabled={busy}>
                           Activer
@@ -504,7 +504,7 @@ export default function AdminUsers({
                   </tr>
                   {editing?.userId === u.id ? (
                     <tr>
-                      <td colSpan={7} style={{ background: 'var(--color-bg)' }}>
+                      <td colSpan={7} className="card-block" style={{ background: 'var(--color-bg)' }}>
                         <div className="small muted" style={{ marginBottom: 12 }}>
                           Modifier le profil de <strong>{u.name}</strong>
                         </div>

@@ -17,7 +17,7 @@ export default function ProjectNav({ projectId }: { projectId: string }) {
   ];
 
   return (
-    <nav className="app-nav no-print" style={{ marginLeft: 0, marginBottom: 24, borderBottom: '1px solid var(--color-divider)', paddingBottom: 12 }}>
+    <nav className="app-nav project-nav no-print" style={{ marginLeft: 0, marginBottom: 24, borderBottom: '1px solid var(--color-divider)', paddingBottom: 12 }}>
       {items.map((item) => {
         const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
         return (

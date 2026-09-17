@@ -115,7 +115,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         ))}
       </div>
 
-      <div className="grid gap-24" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
+      <div className="layout-main-side">
         <div className="stack">
           <div className="panel">
             <div className="panel-head">

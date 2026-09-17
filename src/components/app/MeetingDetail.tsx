@@ -162,7 +162,7 @@ export default function MeetingDetail({
           </div>
         </div>
       ) : (
-        <div className="grid gap-24" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
+        <div className="layout-main-side">
           <div className="panel">
             <div className="panel-body">
               <Section title="Ordre du jour" value={meeting.agenda} />

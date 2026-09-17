@@ -487,7 +487,7 @@ export default function PlanningBoard({
             return (
               <div
                 key={task.id}
-                className={`gantt-row ${hasChildren ? 'is-parent' : ''} ${selectedId === task.id ? 'is-selected' : ''}`}
+                className={`gantt-row ${hasChildren ? 'is-parent' : ''} ${selectedId === task.id ? 'is-selected' : ''} ${critical.has(task.id) && !hasChildren ? 'is-critical' : ''}`}
                 style={{ paddingLeft: 12 + depth * 16, cursor: 'pointer' }}
                 onClick={() => select(task.id)}
                 onMouseEnter={(e) => setHover({ id: task.id, x: e.clientX, y: e.clientY })}
@@ -506,12 +506,12 @@ export default function PlanningBoard({
                   );
                 })()}
                 {task.meetingCount ? (
-                  <span className="small muted" title={`${task.meetingCount} PV de réunion`}>
+                  <span className="small muted gantt-row-meta" title={`${task.meetingCount} PV de réunion`}>
                     📋 {task.meetingCount}
                   </span>
                 ) : null}
                 {notes ? (
-                  <span className="small muted" title={`${notes} commentaire(s)`}>
+                  <span className="small muted gantt-row-meta" title={`${notes} commentaire(s)`}>
                     💬 {notes}
                   </span>
                 ) : null}

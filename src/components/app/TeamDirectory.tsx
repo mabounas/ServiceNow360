@@ -96,7 +96,7 @@ export default function TeamDirectory({ entries }: { entries: DirectoryEntry[] }
         {visible.length === 0 ? (
           <div className="empty">Aucune personne ne correspond à cette recherche.</div>
         ) : (
-          <table className="table table-compact">
+          <table className="table table-compact table-cards">
             <thead>
               <tr>
                 <th>Nom</th>
@@ -109,21 +109,21 @@ export default function TeamDirectory({ entries }: { entries: DirectoryEntry[] }
             <tbody>
               {visible.map((e) => (
                 <tr key={e.id}>
-                  <td>
+                  <td className="card-head">
                     <strong>{e.name}</strong>
                     {e.isMe ? <span className="small muted"> (vous)</span> : null}
                     {e.jobRole ? <div className="small muted">{e.jobRole}</div> : null}
                   </td>
-                  <td className="small">{e.company}</td>
-                  <td className="small">{PROJECT_ROLE_LABEL[e.role]}</td>
-                  <td className="small nowrap">
+                  <td className="small" data-label="Société">{e.company}</td>
+                  <td className="small" data-label="Rôle">{PROJECT_ROLE_LABEL[e.role]}</td>
+                  <td className="small nowrap" data-label="Téléphone">
                     {e.phone ? (
                       <a href={`tel:${e.phone.replace(/[^\d+]/g, '')}`}>{e.phone}</a>
                     ) : (
                       <span className="muted">—</span>
                     )}
                   </td>
-                  <td className="small">
+                  <td className="small" data-label="E-mail">
                     <a href={`mailto:${e.email}`} style={{ wordBreak: 'break-all' }}>
                       {e.email}
                     </a>

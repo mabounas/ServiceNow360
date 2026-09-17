@@ -163,7 +163,7 @@ export default async function TicketsPage({
           {tickets.length === 0 ? (
             <div className="empty">Aucun ticket ne correspond à ces critères.</div>
           ) : (
-            <table className="table table-compact">
+            <table className="table table-compact table-cards">
               <thead>
                 <tr>
                   <th>Référence</th>
@@ -182,17 +182,21 @@ export default async function TicketsPage({
                   const state = slaState(t);
                   return (
                     <tr key={t.id}>
-                      <td className="mono nowrap">
+                      <td className="mono nowrap card-head">
                         <Link href={`/app/tickets/${t.id}`}>{t.reference}</Link>
                       </td>
-                      <td className="small nowrap">{TICKET_TYPE_SHORT[t.type]}</td>
-                      <td>{t.title}</td>
-                      <td className="small nowrap">{TICKET_STATUS_LABEL[t.status]}</td>
-                      <td className="small nowrap">{t.severity ? SEVERITY_LABEL[t.severity] : '—'}</td>
-                      <td className="small nowrap">{fullName(t.createdBy)}</td>
-                      <td className="small nowrap">{t.assignee ? fullName(t.assignee) : '—'}</td>
-                      <td className="small nowrap mono">{formatDate(t.createdAt)}</td>
-                      <td>
+                      <td className="small nowrap" data-label="Type">{TICKET_TYPE_SHORT[t.type]}</td>
+                      <td className="card-head">
+                        <Link href={`/app/tickets/${t.id}`} className="card-title-link">
+                          {t.title}
+                        </Link>
+                      </td>
+                      <td className="small nowrap" data-label="Statut">{TICKET_STATUS_LABEL[t.status]}</td>
+                      <td className="small nowrap" data-label="Sévérité">{t.severity ? SEVERITY_LABEL[t.severity] : '—'}</td>
+                      <td className="small nowrap" data-label="Initiateur">{fullName(t.createdBy)}</td>
+                      <td className="small nowrap" data-label="Assigné à">{t.assignee ? fullName(t.assignee) : '—'}</td>
+                      <td className="small nowrap mono" data-label="Créé le">{formatDate(t.createdAt)}</td>
+                      <td data-label="SLA">
                         <span className={`badge badge-${SLA_STATE_TONE[state]}`}>{SLA_STATE_LABEL[state]}</span>
                       </td>
                     </tr>

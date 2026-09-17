@@ -347,7 +347,7 @@ export default function LandingPage() {
                   <h3 style={{ fontSize: 22, margin: '0 0 6px' }}>{t.signup.title}</h3>
                   <p className="text-muted" style={{ fontSize: 13, margin: '0 0 22px' }}>{t.signup.sub}</p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="landing-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div className="field">
                       <label htmlFor="su-first">{t.signup.firstName}</label>
                       <input className="input" id="su-first" autoComplete="given-name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
@@ -488,7 +488,7 @@ export default function LandingPage() {
             <h2 style={{ fontSize: 30, margin: '0 0 14px' }}>{t.preview.title}</h2>
             <p className="text-muted" style={{ fontSize: 14, margin: 0 }}>{t.preview.sub}</p>
           </div>
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', border: '2px solid var(--color-divider)', background: 'var(--color-surface)', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
+          <div className="landing-board" style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', border: '2px solid var(--color-divider)', background: 'var(--color-surface)', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '2px solid var(--color-divider)' }}>
               <span style={{ width: 10, height: 10, background: 'var(--color-accent)', display: 'block' }} />
               <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 12, letterSpacing: '-0.01em' }}>{t.board.title}</span>
@@ -497,9 +497,9 @@ export default function LandingPage() {
                 <span>{t.board.alert}</span>
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className="landing-board-cols" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
               {CARD_KINDS.map((cards, index) => (
-                <div key={index} style={{ padding: 16, borderRight: index < 2 ? '1px solid var(--color-divider)' : undefined }}>
+                <div key={index} className="landing-board-col" style={{ padding: 16, borderRight: index < 2 ? '1px solid var(--color-divider)' : undefined }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
                     <span className="text-muted" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t.board.cols[index]}</span>
                     <span className="text-muted" style={{ fontSize: 10 }}>{cards.length}</span>
@@ -589,7 +589,7 @@ export default function LandingPage() {
           </div>
 
           <div style={{ border: '2px solid var(--color-divider)', background: 'var(--color-surface)', padding: 28 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="landing-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div className="field">
                 <label htmlFor="ct-first">{t.contact.firstName}</label>
                 <input className="input" id="ct-first" autoComplete="given-name" value={contact.firstName} onChange={(e) => setContact({ ...contact, firstName: e.target.value })} />
