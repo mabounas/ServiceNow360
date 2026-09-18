@@ -3,9 +3,9 @@ import { prisma } from './prisma';
 import { HttpError, type SessionUser } from './auth';
 import { assertTicketAssignable, canContribute, canEditPlanning, canAssignTicket, getProjectAccess } from './rbac';
 import { computeSlaDueDates } from './sla';
-import { TICKET_PREFIX, TICKET_STATUS_LABEL, TICKET_TYPE_SHORT } from './labels';
+import { TICKET_PREFIX, TICKET_STATUS_LABEL, TICKET_TYPE_LABEL, TICKET_TYPE_SHORT, fullName } from './labels';
 import { canTransition, initialStatus, type ActorContext } from './workflow';
-import { notify, ticketAudience } from './notify';
+import { notify, notifyTicketUpdate } from './notify';
 import { audit } from './audit';
 
 /** Numérotation unique par type : INC-0001 / EVO-0001 / DEM-0001 (§3.3.1). */
@@ -107,13 +107,12 @@ export async function createTicket(user: SessionUser, input: CreateTicketInput) 
     return created;
   });
 
-  // Accusé de réception à l'initiateur + information de l'équipe projet (§3.3.3).
-  const audience = await ticketAudience(input.projectId, ticket);
-  await notify({
-    userIds: audience,
-    title: `${ticket.reference} — ${TICKET_TYPE_SHORT[ticket.type]} enregistré`,
-    body: `${ticket.title}\nStatut : ${TICKET_STATUS_LABEL[ticket.status]}`,
-    link: `/app/tickets/${ticket.id}`,
+  // Accusé de réception au déclarant (helpdesk en copie) + information de l'équipe projet (§3.3.3).
+  await notifyTicketUpdate({
+    ticket,
+    actor: user,
+    headline: `${TICKET_TYPE_SHORT[ticket.type]} enregistré`,
+    lines: [`Nouveau ticket déclaré : ${TICKET_TYPE_LABEL[ticket.type]}.`, `Statut : ${TICKET_STATUS_LABEL[ticket.status]}`],
   });
 
   await audit({ userId: user.id, action: 'ticket.create', entity: 'Ticket', entityId: ticket.id, meta: { reference: ticket.reference } });
@@ -264,15 +263,13 @@ La demande a été acceptée. Créez la tâche au planning puis rattachez-la au 
     });
   }
 
-  const audience = await ticketAudience(ticket.projectId, updated);
-  await notify({
-    userIds: audience,
-    title: `${updated.reference} — ${TICKET_STATUS_LABEL[input.to]}`,
-    body: input.note?.trim()
-      ? `${updated.title}\n${input.note.trim()}`
-      : `${updated.title}\nNouveau statut : ${TICKET_STATUS_LABEL[input.to]}`,
-    link: `/app/tickets/${updated.id}`,
-  });
+  const lines = [`Statut : ${TICKET_STATUS_LABEL[ticket.status]} → ${TICKET_STATUS_LABEL[input.to]}`];
+  if (input.note?.trim()) lines.push(`Commentaire : ${input.note.trim()}`);
+  if (updated.assigneeId && updated.assigneeId !== ticket.assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: updated.assigneeId }, select: { firstName: true, lastName: true } });
+    if (assignee) lines.push(`Pris en charge par : ${fullName(assignee)}`);
+  }
+  await notifyTicketUpdate({ ticket: updated, actor: user, headline: TICKET_STATUS_LABEL[input.to], lines });
 
   await audit({
     userId: user.id,

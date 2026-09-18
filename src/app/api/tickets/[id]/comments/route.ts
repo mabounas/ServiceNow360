@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
 import { canContribute, isStaff, requireTicketAccess } from '@/lib/rbac';
 import { fail, handle, ok } from '@/lib/api';
-import { notify, ticketAudience } from '@/lib/notify';
+import { notifyTicketUpdate } from '@/lib/notify';
 import { fullName } from '@/lib/labels';
 
 type Params = { params: Promise<{ id: string }> };
@@ -45,13 +45,17 @@ export async function POST(request: Request, { params }: Params) {
       await prisma.ticket.update({ where: { id }, data: { firstResponseAt: new Date() } });
     }
 
+    // Les notes internes restent dans l'équipe : ni alerte, ni e-mail au déclarant.
     if (!internal) {
-      const audience = await ticketAudience(ticket.projectId, ticket);
-      await notify({
-        userIds: audience.filter((uid) => uid !== user.id),
-        title: `${ticket.reference} — nouveau commentaire`,
-        body: `${fullName(user)} : ${text.slice(0, 240)}`,
-        link: `/app/tickets/${id}`,
+      const files = Array.isArray(body.attachments) ? body.attachments.length : 0;
+      await notifyTicketUpdate({
+        ticket,
+        actor: user,
+        headline: 'Nouveau commentaire',
+        lines: [
+          `${fullName(user)} : ${text.length > 600 ? `${text.slice(0, 600)}…` : text}`,
+          ...(files ? [`${files} pièce(s) jointe(s) ajoutée(s)`] : []),
+        ],
       });
     }
 

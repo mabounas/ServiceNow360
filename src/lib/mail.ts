@@ -10,7 +10,15 @@ export function appUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '');
 }
 
-export async function sendMail(message: { to?: string; bcc?: string[]; subject: string; text: string; html?: string }) {
+export async function sendMail(message: {
+  to?: string | string[];
+  cc?: string | string[];
+  bcc?: string[];
+  replyTo?: string;
+  subject: string;
+  text: string;
+  html?: string;
+}) {
   if (!smtpConfigured()) return false;
   try {
     // nodemailer est chargé dynamiquement : le portail fonctionne sans dépendance e-mail.

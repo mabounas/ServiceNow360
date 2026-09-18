@@ -4,8 +4,8 @@ import { assertTicketAssignable, canAssignTicket, canEditTicketContent, isStaff,
 import { fail, handle, ok } from '@/lib/api';
 import { computeSlaDueDates } from '@/lib/sla';
 import { audit } from '@/lib/audit';
-import { notify } from '@/lib/notify';
-import { fullName } from '@/lib/labels';
+import { notifyTicketUpdate } from '@/lib/notify';
+import { PRIORITY_LABEL, SEVERITY_LABEL, fullName } from '@/lib/labels';
 import type { Prisma } from '@prisma/client';
 
 type Params = { params: Promise<{ id: string }> };
@@ -178,13 +178,27 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     await audit({ userId: user.id, action: 'ticket.update', entity: 'Ticket', entityId: id, meta: { fields: events.map((e) => e.field) } });
 
-    const newAssignee = events.find((e) => e.field === 'assignee')?.toValue;
-    if (newAssignee && newAssignee !== user.id) {
-      await notify({
-        userIds: [newAssignee],
-        title: `${ticket.reference} — vous a été affecté`,
-        body: `${fullName(user)} vous a affecté le ticket « ${ticket.title} ».`,
-        link: `/app/tickets/${id}`,
+    if (events.length) {
+      const lines: string[] = [];
+      for (const e of events) {
+        if (e.field === 'priority') lines.push(`Priorité : ${PRIORITY_LABEL[e.toValue as keyof typeof PRIORITY_LABEL] ?? e.toValue}`);
+        else if (e.field === 'severity') lines.push(`Sévérité : ${e.toValue ? SEVERITY_LABEL[e.toValue as keyof typeof SEVERITY_LABEL] : '—'}`);
+        else if (e.field === 'assignee') {
+          const who = e.toValue ? await prisma.user.findUnique({ where: { id: e.toValue }, select: { firstName: true, lastName: true } }) : null;
+          lines.push(who ? `Pris en charge par : ${fullName(who)}` : 'Affectation retirée');
+        } else if (e.field === 'task') {
+          const task = e.toValue ? await prisma.task.findUnique({ where: { id: e.toValue }, select: { name: true } }) : null;
+          lines.push(task ? `Rattaché à la tâche du planning : ${task.name}` : 'Tâche du planning détachée');
+        } else if (e.field === 'estimateDays') lines.push(`Charge estimée : ${e.toValue ?? '—'} j`);
+        else if (e.field === 'estimateCost') lines.push(`Coût estimé : ${e.toValue ?? '—'}`);
+        else lines.push(e.note ?? `${e.field} modifié`);
+      }
+      const assigned = events.find((e) => e.field === 'assignee');
+      await notifyTicketUpdate({
+        ticket: updated,
+        actor: user,
+        headline: assigned?.toValue && events.length === 1 ? 'Prise en charge' : 'Ticket mis à jour',
+        lines,
       });
     }
 
